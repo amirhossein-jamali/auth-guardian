@@ -28,6 +28,7 @@ backend/configs/db.env
 Roadmap.md
 JourneyHub-Auth.md
 backend/docs/logger_architecture.md
+domain-architecture-guidelines.md
 
 # IDE specific files
 .idea/
