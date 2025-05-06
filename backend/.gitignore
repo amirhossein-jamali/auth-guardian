@@ -27,6 +27,7 @@ backend/configs/db.env
 # Documentation files we don't want to include yet
 Roadmap.md
 JourneyHub-Auth.md
+backend/docs/logger_architecture.md
 
 # IDE specific files
 .idea/
