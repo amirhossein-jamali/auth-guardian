@@ -1,0 +1,39 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Go workspace file
+go.work
+
+# Dependency directories (remove the comment below if you wish to check in your dependencies)
+# vendor/
+
+# Environment variables and configuration
+.env
+*.env
+backend/configs/*.env
+backend/configs/app.env
+backend/configs/db.env
+
+# Documentation files we don't want to include yet
+Roadmap.md
+JourneyHub-Auth.md
+
+# IDE specific files
+.idea/
+.vscode/
+
+# MacOS
+.DS_Store
+
+# Log files
+*.log

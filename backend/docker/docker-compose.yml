@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:latest
+    container_name: auth_guardian_postgres
+    env_file:
+      - ../configs/db.env
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auth_guardian_admin -d auth_guardian_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - auth_guardian_network
+  
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: auth_guardian_api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    volumes:
+      - ../configs:/app/configs
+      - ./logs:/app/logs
+    environment:
+      CONFIG_PATH: /app/configs/
+    env_file:
+      - ../configs/app.env
+      - ../configs/db.env
+    restart: unless-stopped
+    networks:
+      - auth_guardian_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  auth_guardian_network:
+    driver: bridge
+
+volumes:
+  postgres_data:

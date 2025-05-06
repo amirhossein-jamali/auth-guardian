@@ -1,0 +1,42 @@
+with-expecter: true
+packages:
+  github.com/amirhossein-jamali/auth-guardian/pkg/logger:
+    config:
+      dir: "test/mocks/pkg/logger"
+      filename: "{{.InterfaceName}}.go"
+      outpkg: "mocks"
+      inpackage: false
+    all: true
+  github.com/amirhossein-jamali/auth-guardian/internal/domain/port/secondary:
+    config:
+      dir: "test/mocks/internal/domain/port/secondary"
+      filename: "{{.InterfaceName}}.go"
+      outpkg: "mocks"
+      inpackage: false
+    all: true
+    recursive: true
+  github.com/amirhossein-jamali/auth-guardian/internal/domain/port/primary:
+    config:
+      dir: "test/mocks/internal/domain/port/primary"
+      filename: "{{.InterfaceName}}.go"
+      outpkg: "mocks"
+      inpackage: false
+    all: true
+    recursive: true
+  github.com/amirhossein-jamali/auth-guardian/internal/domain/service:
+    config:
+      dir: "test/mocks/internal/domain/service"
+      filename: "{{.InterfaceName}}.go"
+      outpkg: "mocks"
+      inpackage: false
+    all: true
+    recursive: true
+  github.com/amirhossein-jamali/auth-guardian/internal/infrastructure:
+    config:
+      dir: "test/mocks/internal/infrastructure"
+      filename: "{{.InterfaceName}}.go"
+      outpkg: "mocks"
+      inpackage: false
+    all: true
+    recursive: true
+all: false
