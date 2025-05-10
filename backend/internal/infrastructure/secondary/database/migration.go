@@ -17,10 +17,18 @@ const (
 	CurrentSchemaVersion = "1.0.0"
 )
 
+// Migration represents a database migration
+type Migration interface {
+	Migrate(db *gorm.DB) error
+	Rollback(db *gorm.DB) error
+	GetName() string
+}
+
 // MigrationManagerImpl implements MigrationManager
 type MigrationManagerImpl struct {
-	db     *gorm.DB
-	logger logger.Logger
+	db         *gorm.DB
+	logger     logger.Logger
+	migrations []Migration
 }
 
 // Ensure MigrationManagerImpl implements MigrationManager
@@ -28,10 +36,18 @@ var _ MigrationManager = (*MigrationManagerImpl)(nil)
 
 // NewMigrationManager creates a new MigrationManager
 func NewMigrationManager(db *gorm.DB, logger logger.Logger) MigrationManager {
-	return &MigrationManagerImpl{
+	manager := &MigrationManagerImpl{
 		db:     db,
 		logger: logger,
 	}
+
+	manager.registerMigrations()
+	return manager
+}
+
+// registerMigrations initializes all available migrations
+func (m *MigrationManagerImpl) registerMigrations() {
+	// Register additional migrations here if needed
 }
 
 // MigrateAll runs migrations for all models
@@ -46,6 +62,7 @@ func (m *MigrationManagerImpl) MigrateAll() error {
 	// All models to migrate
 	models := []interface{}{
 		&dbModel.User{},
+		&dbModel.AuthSession{}, // Added AuthSession model
 		// Add future models here
 	}
 
@@ -53,6 +70,16 @@ func (m *MigrationManagerImpl) MigrateAll() error {
 		if err := m.MigrateModel(modelEntity); err != nil {
 			return err
 		}
+	}
+
+	// Apply any custom migrations
+	if err := m.applyCustomMigrations(); err != nil {
+		return err
+	}
+
+	// Add foreign key constraints
+	if err := m.addForeignKeyConstraints(); err != nil {
+		return err
 	}
 
 	// Update the schema version
@@ -76,7 +103,7 @@ func (m *MigrationManagerImpl) MigrateModel(modelEntity interface{}) error {
 	if tabler, ok := modelEntity.(schema.Tabler); ok {
 		tableName = tabler.TableName()
 	} else {
-		tableName = m.db.NamingStrategy.TableName(modelEntity.(string))
+		tableName = m.db.NamingStrategy.TableName(fmt.Sprintf("%T", modelEntity))
 	}
 
 	m.logger.Info("Migrating table", logField.NewField("table", tableName))
@@ -89,6 +116,63 @@ func (m *MigrationManagerImpl) MigrateModel(modelEntity interface{}) error {
 	}
 
 	m.logger.Info("Successfully migrated table", logField.NewField("table", tableName))
+	return nil
+}
+
+// applyCustomMigrations runs any registered migrations
+func (m *MigrationManagerImpl) applyCustomMigrations() error {
+	if len(m.migrations) == 0 {
+		return nil
+	}
+
+	m.logger.Info("Applying custom migrations", logField.NewField("count", len(m.migrations)))
+
+	for _, migration := range m.migrations {
+		m.logger.Info("Applying migration", logField.NewField("name", migration.GetName()))
+
+		if err := migration.Migrate(m.db); err != nil {
+			m.logger.Error("Failed to apply migration",
+				logField.NewField("name", migration.GetName()),
+				logField.NewField("error", err.Error()))
+			return err
+		}
+
+		m.logger.Info("Successfully applied migration", logField.NewField("name", migration.GetName()))
+	}
+
+	return nil
+}
+
+// addForeignKeyConstraints adds all necessary foreign key relationships
+func (m *MigrationManagerImpl) addForeignKeyConstraints() error {
+	m.logger.Info("Adding foreign key constraints")
+
+	// Add foreign key from auth_sessions to auth_users with CASCADE delete
+	err := m.db.Exec(`
+		DO $$
+		BEGIN
+			-- Check if the constraint already exists
+			IF NOT EXISTS (
+				SELECT 1 FROM pg_constraint 
+				WHERE conname = 'fk_auth_sessions_user_id'
+			) THEN
+				ALTER TABLE auth_sessions 
+				ADD CONSTRAINT fk_auth_sessions_user_id
+				FOREIGN KEY (user_id) 
+				REFERENCES auth_users(id) 
+				ON DELETE CASCADE;
+			END IF;
+		END
+		$$;
+	`).Error
+
+	if err != nil {
+		m.logger.Error("Failed to add foreign key constraint to auth_sessions",
+			logField.NewField("error", err.Error()))
+		return err
+	}
+
+	m.logger.Info("Foreign key constraints added successfully")
 	return nil
 }
 
@@ -171,6 +255,26 @@ func (m *MigrationManagerImpl) SeedData() error {
 		m.logger.Info("Skipping user data seeding, data already exists")
 	}
 
+	// Clear expired sessions on startup
+	if err := m.cleanupExpiredSessions(); err != nil {
+		m.logger.Warn("Failed to clean up expired sessions", logField.NewField("error", err.Error()))
+		// Continue execution despite cleanup failure
+	}
+
 	m.logger.Info("Data seeding completed successfully")
+	return nil
+}
+
+// cleanupExpiredSessions removes expired auth sessions during startup
+func (m *MigrationManagerImpl) cleanupExpiredSessions() error {
+	m.logger.Info("Cleaning up expired auth sessions")
+
+	result := m.db.Where("expires_at < ?", time.Now()).Delete(&dbModel.AuthSession{})
+	if result.Error != nil {
+		return result.Error
+	}
+
+	m.logger.Info("Expired sessions cleanup completed",
+		logField.NewField("deletedCount", result.RowsAffected))
 	return nil
 }

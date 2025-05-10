@@ -34,3 +34,8 @@ func (f *RepositoryFactory) CreateUserRepository() repository.UserRepository {
 	userMapper := mapper.NewUserMapper(f.logger)
 	return NewGormUserRepository(f.db, f.logger, userMapper)
 }
+
+// CreateAuthSessionRepository creates a new auth session repository
+func (f *RepositoryFactory) CreateAuthSessionRepository() repository.AuthSessionRepository {
+	return NewGormAuthSessionRepository(f.db, f.logger)
+}

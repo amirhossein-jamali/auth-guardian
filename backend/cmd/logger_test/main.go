@@ -1,10 +1,10 @@
 package main
 
 import (
-	"github.com/amirhossein-jamali/auth-guardian/internal/infrastructure/secondary/logger/factory"
 	"time"
 
 	"github.com/amirhossein-jamali/auth-guardian/configs"
+	"github.com/amirhossein-jamali/auth-guardian/internal/infrastructure/secondary/logger/factory"
 	pkgLogger "github.com/amirhossein-jamali/auth-guardian/pkg/logger"
 )
 

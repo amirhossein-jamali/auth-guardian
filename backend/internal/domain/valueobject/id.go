@@ -13,6 +13,14 @@ func (id *ID) String() string {
 	return string(*id)
 }
 
+// ParseID creates an ID from a string value
+func ParseID(idStr string) (ID, error) {
+	if idStr == "" {
+		return "", fmt.Errorf("ID cannot be empty")
+	}
+	return ID(idStr), nil
+}
+
 // MarshalJSON implements json.Marshaler
 func (id *ID) MarshalJSON() ([]byte, error) {
 	return json.Marshal(id.String())
