@@ -1,0 +1,69 @@
+server:
+  host: "localhost"
+  port: 8080
+  readTimeout: 5    # seconds
+  writeTimeout: 10  # seconds
+  idleTimeout: 120  # seconds
+
+database:
+  driver: "postgres"
+  host: "dev_db" 
+  port: "5432"
+  username: "dev_user"
+  password: "dev_pass"
+  database: "dev_db"
+  sslMode: "disable"
+  maxOpenConns: 25
+  maxIdleConns: 5
+  connMaxLifetime: 30  # minutes
+
+jwt:
+  accessSecret: "dev_access_secret"
+  refreshSecret: "dev_refresh_secret"
+  accessTTL: 15       # minutes
+  refreshTTL: 24      # hours
+  issuer: "auth-guardian"
+  audience: "auth-guardian-dev"
+  maxConcurrent: 5    # maximum concurrent sessions per user
+  allowedClockSkew: 30 # seconds
+
+logger:
+  level: "debug"
+  format: "json"
+  output: "stdout"
+  timeFormat: "2006-01-02T15:04:05Z07:00"
+  callerInfo: true
+  enableAudit: false
+
+redis:
+  host: "redis-dev"
+  port: "6379"
+  password: "dev-pass"
+  db: 0
+  keyPrefix: "dev:"
+
+auth:
+  argon2:
+    memory: 65536       # 64MB memory cost
+    iterations: 3        # Time cost
+    parallelism: 2       # Number of threads
+    saltLength: 16       # Salt length in bytes
+    keyLength: 32        # Hash length in bytes
+  accessTokenSecret: "dev_access_secret"
+  refreshTokenSecret: "dev_refresh_secret"
+  accessTokenTTL: 15        # minutes
+  refreshTokenTTL: 24       # hours
+  maxSessionsPerUser: 5     # Maximum concurrent sessions per user
+  sessionInactivityTTL: 30  # days
+  operationTimeoutSeconds: 30
+
+metrics:
+  enabled: true
+  type: "prometheus"
+  namespace: "auth_guardian_dev"
+
+security:
+  knownIPs: ["192.168.1.1"]
+  suspiciousIPs: []
+  suspiciousUserAgents: []
+  enableRiskEvaluation: false 

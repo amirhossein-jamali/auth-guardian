@@ -1,0 +1,106 @@
+# Compiled binaries and build output
+/bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Go specific
+*.o
+*.a
+*.test
+*.prof
+/vendor/
+/go.work
+
+# Log files
+*.log
+/log/
+/logs/
+
+# Environment & config files with secrets
+.env
+.env.local
+*.env.local
+*.env.development.local
+*.env.test.local
+*.env.production.local
+/config/local*.yml
+/config/local*.yaml
+/config/secrets*.yml
+/config/secrets*.yaml
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+*.sublime-workspace
+*.sublime-project
+*.code-workspace
+.settings/
+
+# OS specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Test cache
+/testdata/
+coverage.txt
+coverage.out
+profile.out
+
+# Temporary files
+/tmp/
+/temp/
+*.tmp
+*~
+
+# Redis dump files
+dump.rdb
+*.rdb
+
+# Binary files that don't belong in version control
+/auth-guardian
+/api
+/main
+
+# Docker related
+.docker/data/
+docker-compose.override.yml
+docker/logs/
+docker/**/*.pem
+docker/**/*.key
+docker/**/*.crt
+docker/**/*.csr
+docker/**/*.srl
+docker/**/data/
+docker/**/.env
+docker/certs/
+
+# Markdown files - ignore all except README.md files
+*.md
+!README.md
+!readme.md
+
+# Git initialization script
+init-repo.sh
+
+# Local development overrides
+override.yaml
+/local/ 
+
+old-backend-backup.tar.gz

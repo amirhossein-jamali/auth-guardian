@@ -1,0 +1,57 @@
+server:
+  host: "0.0.0.0"
+  port: 8080
+  readTimeout: 5    # seconds
+  writeTimeout: 10  # seconds
+  idleTimeout: 120  # seconds
+
+database:
+  driver: "postgres"
+  host: "postgres"  # Use container name for Docker
+  port: "5432"
+  username: ""      # Set via AUTH_GUARDIAN_DB_USERNAME
+  password: ""      # Set via AUTH_GUARDIAN_DB_PASSWORD
+  database: ""      # Set via AUTH_GUARDIAN_DB_NAME
+  sslMode: "disable"
+  maxOpenConns: 25
+  maxIdleConns: 5
+  connMaxLifetime: 30  # minutes
+
+jwt:
+  accessSecret: ""  # Set via AUTH_GUARDIAN_JWT_ACCESS_SECRET
+  refreshSecret: "" # Set via AUTH_GUARDIAN_JWT_REFRESH_SECRET
+  accessTTL: 15       # minutes
+  refreshTTL: 24      # hours
+  issuer: "auth-guardian"
+  audience: "auth-guardian-api"
+  maxConcurrent: 5    # maximum concurrent sessions per user
+  allowedClockSkew: 30 # seconds
+
+logger:
+  level: "debug"
+  format: "json"
+  output: "stdout"
+  timeFormat: "2006-01-02T15:04:05.000Z07:00"
+  callerInfo: true
+  enableAudit: true   # Enable audit logging for security events
+
+redis:
+  host: "redis"     # Use container name for Docker
+  port: "6379"
+  password: ""      # Set via AUTH_GUARDIAN_REDIS_PASSWORD
+  db: 0
+  keyPrefix: "ag_dev:"
+
+auth:
+  argon2:
+    memory: 65536       # 64MB memory cost (64 * 1024)
+    iterations: 3        # Time cost
+    parallelism: 2       # Number of threads
+    saltLength: 16       # Salt length in bytes
+    keyLength: 32        # Hash length in bytes
+  accessTokenSecret: ""     # Set via AUTH_GUARDIAN_ACCESS_TOKEN_SECRET
+  refreshTokenSecret: ""    # Set via AUTH_GUARDIAN_REFRESH_TOKEN_SECRET
+  accessTokenTTL: 15        # minutes
+  refreshTokenTTL: 24       # hours
+  maxSessionsPerUser: 5     # Maximum concurrent sessions per user
+  sessionInactivityTTL: 30  # days

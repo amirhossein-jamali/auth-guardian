@@ -1,0 +1,70 @@
+environment: test
+server:
+  host: "localhost"
+  port: 9090
+  readTimeout: 10    # seconds
+  writeTimeout: 10  # seconds
+  idleTimeout: 30  # seconds
+
+database:
+  driver: "postgres"
+  host: "test_db" 
+  port: "5432"
+  username: "testuser"
+  password: "testpass"
+  database: "test_db"
+  sslMode: "disable"
+  maxOpenConns: 5
+  maxIdleConns: 2
+  connMaxLifetime: 15  # minutes
+
+jwt:
+  accessSecret: "test_access_secret"
+  refreshSecret: "test_refresh_secret"
+  accessTTL: 15       # minutes
+  refreshTTL: 24      # hours
+  issuer: "auth-guardian"
+  audience: "auth-guardian-test"
+  maxConcurrent: 3    # maximum concurrent sessions per user
+  allowedClockSkew: 15 # seconds
+
+logger:
+  level: "debug"
+  format: "json"
+  output: "stdout"
+  timeFormat: "2006-01-02T15:04:05Z07:00"
+  callerInfo: true
+  enableAudit: true   # Enable audit logging for security events
+
+redis:
+  host: "redis-test"
+  port: "6379"
+  password: "redis-test-pass"
+  db: 1
+  keyPrefix: "test:"
+
+auth:
+  argon2:
+    memory: 16384       # 16MB memory cost for testing
+    iterations: 1        # Time cost - minimum for testing speed
+    parallelism: 1       # Number of threads - minimum for testing
+    saltLength: 16       # Salt length in bytes
+    keyLength: 32        # Hash length in bytes
+  accessTokenSecret: "test_access_secret"
+  refreshTokenSecret: "test_refresh_secret"
+  accessTokenTTL: 15        # minutes
+  refreshTokenTTL: 24       # hours
+  maxSessionsPerUser: 3     # Maximum concurrent sessions per user
+  sessionInactivityTTL: 15  # days
+  operationTimeoutSeconds: 30
+
+metrics:
+  enabled: true
+  type: "prometheus"
+  namespace: "auth_guardian_test"
+
+security:
+  knownIPs: ["192.168.1.1", "10.0.0.1"]
+  suspiciousIPs: ["1.2.3.4"]
+  suspiciousUserAgents: ["suspiciousBot"]
+  enableRiskEvaluation: true 

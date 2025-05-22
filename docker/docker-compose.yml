@@ -1,0 +1,149 @@
+services:
+  postgres:
+    image: postgres:latest
+    container_name: auth_guardian_postgres
+    environment:
+      POSTGRES_USER: ${AUTH_GUARDIAN_DB_USERNAME}
+      POSTGRES_PASSWORD: ${AUTH_GUARDIAN_DB_PASSWORD}
+      POSTGRES_DB: ${AUTH_GUARDIAN_DB_NAME}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${AUTH_GUARDIAN_DB_USERNAME} -d ${AUTH_GUARDIAN_DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - auth_guardian_network
+  
+  redis:
+    image: redis:latest
+    container_name: auth_guardian_redis
+    command: sh -c 'if [ -z "${AUTH_GUARDIAN_REDIS_PASSWORD}" ]; then redis-server; else redis-server --requirepass "${AUTH_GUARDIAN_REDIS_PASSWORD}"; fi'
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: sh -c 'if [ -z "${AUTH_GUARDIAN_REDIS_PASSWORD}" ]; then redis-cli ping; else redis-cli -a "${AUTH_GUARDIAN_REDIS_PASSWORD}" ping; fi'
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - auth_guardian_network
+  
+  api:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: auth_guardian_api
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    # Port is no longer exposed publicly, only to internal network
+    expose:
+      - "8080"
+    volumes:
+      - ../configs:/app/configs:ro
+      - ./logs:/app/logs
+    env_file:
+      - .env
+    environment:
+      # Pass all environment variables with multiple naming patterns to ensure compatibility
+      CONFIG_PATH: /app/configs/
+      ENV: ${ENV}
+      APP_ENV: ${APP_ENV}
+      LOG_LEVEL: ${LOG_LEVEL}
+      
+      # Database variables - FORCE to postgres hostname regardless of .env value
+      AUTH_GUARDIAN_DB_HOST: postgres
+      AUTH_GUARDIAN_DB_PORT: 5432
+      AUTH_GUARDIAN_DB_USERNAME: ${AUTH_GUARDIAN_DB_USERNAME}
+      AUTH_GUARDIAN_DB_PASSWORD: ${AUTH_GUARDIAN_DB_PASSWORD}
+      AUTH_GUARDIAN_DB_NAME: ${AUTH_GUARDIAN_DB_NAME}
+      
+      # Alternative database variable names that might be used
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${AUTH_GUARDIAN_DB_USERNAME}
+      POSTGRES_PASSWORD: ${AUTH_GUARDIAN_DB_PASSWORD}
+      POSTGRES_DB: ${AUTH_GUARDIAN_DB_NAME}
+      
+      # Database variables with yet another naming style
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${AUTH_GUARDIAN_DB_USERNAME}
+      DB_USERNAME: ${AUTH_GUARDIAN_DB_USERNAME}
+      DB_PASSWORD: ${AUTH_GUARDIAN_DB_PASSWORD}
+      DB_NAME: ${AUTH_GUARDIAN_DB_NAME}
+      DATABASE_NAME: ${AUTH_GUARDIAN_DB_NAME}
+      
+      # Redis variables
+      AUTH_GUARDIAN_REDIS_HOST: redis
+      AUTH_GUARDIAN_REDIS_PORT: 6379
+      AUTH_GUARDIAN_REDIS_PASSWORD: ${AUTH_GUARDIAN_REDIS_PASSWORD}
+      AUTH_GUARDIAN_REDIS_KEY_PREFIX: ${AUTH_GUARDIAN_REDIS_KEY_PREFIX}
+      
+      # Alternative Redis naming
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${AUTH_GUARDIAN_REDIS_PASSWORD}
+      REDIS_KEY_PREFIX: ${AUTH_GUARDIAN_REDIS_KEY_PREFIX}
+      
+      # JWT variables
+      AUTH_GUARDIAN_JWT_ACCESS_SECRET: ${AUTH_GUARDIAN_JWT_ACCESS_SECRET}
+      AUTH_GUARDIAN_JWT_REFRESH_SECRET: ${AUTH_GUARDIAN_JWT_REFRESH_SECRET}
+      JWT_SECRET: ${AUTH_GUARDIAN_JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${AUTH_GUARDIAN_JWT_REFRESH_SECRET}
+      
+      # Auth variables
+      AUTH_GUARDIAN_ACCESS_TOKEN_SECRET: ${AUTH_GUARDIAN_ACCESS_TOKEN_SECRET}
+      AUTH_GUARDIAN_REFRESH_TOKEN_SECRET: ${AUTH_GUARDIAN_REFRESH_TOKEN_SECRET}
+    restart: unless-stopped
+    networks:
+      - auth_guardian_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+  
+  nginx:
+    # Use nginx with HTTP/3 support (different image with better support)
+    image: macbre/nginx-http3:latest
+    container_name: auth_guardian_nginx
+    # Simplified command since HTTP/3 is built into this image
+    command: nginx -g 'daemon off;'
+    ports:
+      - "80:8080"
+      - "443:8443/tcp"
+      - "443:8443/udp" # Required for HTTP/3 (QUIC uses UDP)
+    volumes:
+      - ./nginx/conf:/etc/nginx/conf.d
+      - ./nginx/ssl:/etc/nginx/ssl
+    environment:
+      - NGINX_ENTRYPOINT_QUIET_LOGS=1
+    restart: unless-stopped
+    depends_on:
+      - api
+    networks:
+      - auth_guardian_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  auth_guardian_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
