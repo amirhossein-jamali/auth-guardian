@@ -100,6 +100,20 @@ func (l *ZapLogger) Error(message string, fields map[string]any) {
 	l.logger.Error(message, mapToZapFields(fields)...)
 }
 
+// Flush ensures all buffered logs are written to their destination
+func (l *ZapLogger) Flush() error {
+	// Sync forces buffered logs to be written
+	err := l.logger.Sync()
+	
+	// On Windows, syncing stdout/stderr can fail with "invalid argument"
+	// We can safely ignore this specific error
+	if err != nil && (err.Error() == "sync /dev/stdout: invalid argument" || 
+		err.Error() == "sync /dev/stderr: invalid argument") {
+		return nil
+	}
+	return err
+}
+
 // mapToZapFields converts a map to zap fields
 func mapToZapFields(fields map[string]any) []zap.Field {
 	if fields == nil {

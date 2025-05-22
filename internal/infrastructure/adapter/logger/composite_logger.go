@@ -93,3 +93,18 @@ func (l *CompositeLogger) Error(message string, fields map[string]any) {
 		logger.Error(message, fields)
 	}
 }
+
+// Flush ensures all buffered logs are written to their destination
+func (l *CompositeLogger) Flush() error {
+	l.mu.RLock()
+	loggers := l.loggers
+	l.mu.RUnlock()
+
+	// Call Flush on each logger, returning the first error encountered
+	for _, logger := range loggers {
+		if err := logger.Flush(); err != nil {
+			return err
+		}
+	}
+	return nil
+}

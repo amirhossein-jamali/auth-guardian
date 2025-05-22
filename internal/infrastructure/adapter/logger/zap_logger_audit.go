@@ -99,5 +99,13 @@ func (l *ZapAuditLogger) LogSecurityEvent(ctx context.Context, eventType string,
 // Flush ensures all buffered logs are written to their destination
 func (l *ZapAuditLogger) Flush() error {
 	// Sync forces buffered logs to be written
-	return l.logger.Sync()
+	err := l.logger.Sync()
+	
+	// On Windows, syncing stdout/stderr can fail with "invalid argument"
+	// We can safely ignore this specific error
+	if err != nil && (err.Error() == "sync /dev/stdout: invalid argument" || 
+		err.Error() == "sync /dev/stderr: invalid argument") {
+		return nil
+	}
+	return err
 }

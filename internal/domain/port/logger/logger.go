@@ -28,4 +28,6 @@ type Logger interface {
 	Warn(message string, fields map[string]any)
 	// Error logs error messages
 	Error(message string, fields map[string]any)
+	// Flush ensures all buffered logs are written to their destination
+	Flush() error
 }

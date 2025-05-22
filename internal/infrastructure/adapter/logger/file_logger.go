@@ -134,6 +134,12 @@ func (l *FileLogger) Error(message string, fields map[string]any) {
 	_ = l.write(lport.LogLevelError, message, fields)
 }
 
+// Flush ensures all buffered logs are written to their destination
+func (l *FileLogger) Flush() error {
+	// FileLogger writes directly to file without buffering, so there's nothing to flush
+	return nil
+}
+
 // checkRotateFile checks if we need to rotate the log file based on the current date
 func (l *FileLogger) checkRotateFile() {
 	// Get the current date using timeSource

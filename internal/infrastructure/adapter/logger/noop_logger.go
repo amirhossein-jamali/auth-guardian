@@ -46,3 +46,9 @@ func (l *NoopLogger) Warn(message string, fields map[string]any) {
 func (l *NoopLogger) Error(message string, fields map[string]any) {
 	// Do nothing
 }
+
+// Flush ensures all buffered logs are written to their destination
+func (l *NoopLogger) Flush() error {
+	// No-op implementation doesn't need to flush anything
+	return nil
+}
