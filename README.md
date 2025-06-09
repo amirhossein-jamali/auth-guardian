@@ -27,7 +27,6 @@ cd auth-guardian
 
 2. Install dependencies
 ```bash
-cd new-backend
 go mod download
 ```
 
