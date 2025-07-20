@@ -17,6 +17,8 @@ import (
 	redisAdapter "github.com/amirhossein-jamali/auth-guardian/internal/infrastructure/adapter/redis"
 	"github.com/amirhossein-jamali/auth-guardian/internal/infrastructure/config"
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 // SetupMiddleware initializes all middleware used by the application
@@ -54,6 +56,19 @@ func SetupHandlers(services *ServiceContainer, appLogger logger.Logger) (*handle
 	}
 
 	appLogger.Info("Creating authentication handler", nil)
+
+	// Get repositories and services needed for direct injection
+	otpRepo := services.OTPRepository
+	timeProvider := services.TimeProvider
+
+	if otpRepo == nil {
+		appLogger.Error("OTP repository is nil, handler may not function correctly", nil)
+	}
+
+	if timeProvider == nil {
+		appLogger.Error("Time provider is nil, handler may not function correctly", nil)
+	}
+
 	authHandler := handler.NewAuthHandler(
 		services.UseCaseFactory.RegisterUseCase(),
 		services.UseCaseFactory.LoginUseCase(),
@@ -61,6 +76,10 @@ func SetupHandlers(services *ServiceContainer, appLogger logger.Logger) (*handle
 		services.UseCaseFactory.LogoutAllUseCase(),
 		services.UseCaseFactory.LogoutOtherSessionsUseCase(),
 		services.UseCaseFactory.RefreshTokenUseCase(),
+		services.UseCaseFactory.RequestOTPUseCase(),
+		services.UseCaseFactory.VerifyOTPUseCase(),
+		otpRepo,
+		timeProvider,
 	)
 
 	appLogger.Info("Creating user handler", nil)
@@ -92,7 +111,7 @@ func SetupSessionCleanupTask(services *ServiceContainer, appLogger logger.Logger
 			BatchSize: 1000,
 		}); err != nil {
 			appLogger.Error("Failed to cleanup expired sessions on startup", map[string]any{
-				"error": err.Error(),
+				"errors": err.Error(),
 			})
 		} else {
 			appLogger.Info("Initial expired sessions cleanup completed", nil)
@@ -108,7 +127,7 @@ func SetupSessionCleanupTask(services *ServiceContainer, appLogger logger.Logger
 				BatchSize: 1000,
 			}); err != nil {
 				appLogger.Error("Failed to cleanup expired sessions", map[string]any{
-					"error": err.Error(),
+					"errors": err.Error(),
 				})
 			} else {
 				appLogger.Info("Periodic expired sessions cleanup completed", nil)
@@ -167,9 +186,13 @@ func SetupServer(
 	// Set up all routes
 	routes.SetupRoutes(router, authHandler, userHandler, sessionHandler, authMiddleware)
 
+	// Setup Swagger documentation route
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	appLogger.Info("Swagger documentation route added at /swagger/index.html", nil)
+
 	appLogger.Info("Creating HTTP server configuration", map[string]any{
-		"host": cfg.Server.Host,
-		"port": cfg.Server.Port,
+		"host":  cfg.Server.Host,
+		"ports": cfg.Server.Port,
 	})
 
 	// Create HTTP server
@@ -193,7 +216,7 @@ func StartServer(server *http.Server, logger logger.Logger) {
 	go func() {
 		logger.Info("HTTP server now listening", nil)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Error("Failed to start server", map[string]any{"error": err.Error()})
+			logger.Error("Failed to start server", map[string]any{"errors": err.Error()})
 		}
 	}()
 
@@ -215,13 +238,13 @@ func GracefulShutdown(
 
 	// Shutdown HTTP server
 	if err := server.Shutdown(shutdownCtx); err != nil {
-		logger.Error("Server forced to shutdown", map[string]any{"error": err.Error()})
+		logger.Error("Server forced to shutdown", map[string]any{"errors": err.Error()})
 	}
 
 	// Close Redis connection if initialized
 	if redisManager != nil {
 		if err := redisManager.Close(); err != nil {
-			logger.Error("Error closing Redis connection", map[string]any{"error": err.Error()})
+			logger.Error("Error closing Redis connection", map[string]any{"errors": err.Error()})
 		}
 	}
 

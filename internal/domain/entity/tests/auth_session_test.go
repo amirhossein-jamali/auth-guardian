@@ -44,7 +44,7 @@ func TestAuthSession_IsExpired(t *testing.T) {
 
 	// Create mock time provider
 	t.Run("Session is not expired", func(t *testing.T) {
-		mockTimeProvider := mocks.NewMockTimeProvider(t)
+		mockTimeProvider := mocks.NewMockProvider(t)
 		beforeExpiry := time.Date(2023, 1, 31, 12, 0, 0, 0, time.UTC) // Before expiry date
 		mockTimeProvider.EXPECT().Now().Return(beforeExpiry)
 
@@ -56,7 +56,7 @@ func TestAuthSession_IsExpired(t *testing.T) {
 	})
 
 	t.Run("Session is expired", func(t *testing.T) {
-		mockTimeProvider := mocks.NewMockTimeProvider(t)
+		mockTimeProvider := mocks.NewMockProvider(t)
 		afterExpiry := time.Date(2023, 2, 2, 12, 0, 0, 0, time.UTC) // After expiry date
 		mockTimeProvider.EXPECT().Now().Return(afterExpiry)
 
@@ -68,7 +68,7 @@ func TestAuthSession_IsExpired(t *testing.T) {
 	})
 
 	t.Run("Session expires exactly at expiry time", func(t *testing.T) {
-		mockTimeProvider := mocks.NewMockTimeProvider(t)
+		mockTimeProvider := mocks.NewMockProvider(t)
 		atExpiry := expiresAt // Exactly at expiry date
 		mockTimeProvider.EXPECT().Now().Return(atExpiry)
 

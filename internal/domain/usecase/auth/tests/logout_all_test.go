@@ -95,8 +95,8 @@ func TestLogoutAllUseCase_Execute_DatabaseError(t *testing.T) {
 		UserID: userId,
 	}
 
-	// Setup expectations - database error
-	dbError := errors.New("database error")
+	// Setup expectations - database errors
+	dbError := errors.New("database errors")
 	authSessionRepo.EXPECT().DeleteAllByUserID(mock.Anything, mock.Anything).Return(dbError)
 	logger.EXPECT().Error(mock.Anything, mock.Anything).Return()
 
@@ -124,7 +124,7 @@ func TestLogoutAllUseCase_Execute_With_NonExistentUser(t *testing.T) {
 		UserID: nonExistentUserId,
 	}
 
-	// Setup expectations - no error even if user doesn't exist (idempotent behavior)
+	// Setup expectations - no errors even if user doesn't exist (idempotent behavior)
 	authSessionRepo.EXPECT().DeleteAllByUserID(
 		mock.Anything,
 		mock.MatchedBy(func(id entity.ID) bool {

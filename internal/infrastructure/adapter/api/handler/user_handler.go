@@ -28,6 +28,16 @@ func NewUserHandler(
 }
 
 // GetCurrentUser returns the current user's profile
+// @Summary Get current user profile
+// @Description Get the profile information of the currently authenticated user
+// @Tags users
+// @Accept json
+// @Produce json
+// @Success 200 {object} dto.UserResponse
+// @Failure 401 {object} errors.ErrorResponse
+// @Failure 500 {object} errors.ErrorResponse
+// @Router /users/me [get]
+// @Security ApiKeyAuth
 func (h *UserHandler) GetCurrentUser(c *gin.Context) {
 	userID, exists := c.Get("userID")
 	if !exists {
@@ -61,6 +71,19 @@ func (h *UserHandler) GetCurrentUser(c *gin.Context) {
 }
 
 // UpdateCurrentUser updates the current user's profile
+// @Summary Update user profile
+// @Description Update profile information for the currently authenticated user
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param request body dto.UpdateUserRequest true "User profile data to update"
+// @Success 200 {object} dto.UserResponse
+// @Failure 400 {object} errors.ErrorResponse
+// @Failure 401 {object} errors.ErrorResponse
+// @Failure 422 {object} errors.ErrorResponse
+// @Failure 500 {object} errors.ErrorResponse
+// @Router /users/me [put]
+// @Security ApiKeyAuth
 func (h *UserHandler) UpdateCurrentUser(c *gin.Context) {
 	userID, exists := c.Get("userID")
 	if !exists {

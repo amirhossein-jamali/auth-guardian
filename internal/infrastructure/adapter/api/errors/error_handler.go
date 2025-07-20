@@ -4,21 +4,22 @@ import (
 	domainErr "github.com/amirhossein-jamali/auth-guardian/internal/domain/error"
 )
 
-// ErrorResponse represents the error response format
+// ErrorResponse represents the errors response format
+// swagger:model
 type ErrorResponse struct {
-	Error string `json:"error"`
+	Error string `json:"errors"`
 	Code  string `json:"code,omitempty"`
 }
 
 // HTTPError maps domain errors to HTTP status codes and messages
 func HTTPError(err error) (int, *ErrorResponse) {
-	// Use the domain error's CodeError function to get the HTTP status code
+	// Use the domain errors's CodeError function to get the HTTP status code
 	statusCode := domainErr.CodeError(err)
 
-	// Use the domain error's UserFriendlyMessage function to get a user-friendly error message
+	// Use the domain errors's UserFriendlyMessage function to get a user-friendly errors message
 	message := domainErr.UserFriendlyMessage(err)
 
-	// Map domain errors to error codes for the API response
+	// Map domain errors to errors codes for the API response
 	var errorCode string
 	switch err {
 	case domainErr.ErrInvalidCredentials:

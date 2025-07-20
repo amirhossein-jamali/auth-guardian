@@ -59,7 +59,7 @@ func (uc *RefreshTokenUseCase) Execute(ctx context.Context, input RefreshTokenIn
 	session, err := uc.authSessionRepo.GetByRefreshToken(ctx, input.RefreshToken)
 	if err != nil {
 		uc.logger.Error("Failed to get session by refresh token", map[string]any{
-			"error": err.Error(),
+			"errors": err.Error(),
 		})
 		return nil, err
 	}
@@ -70,7 +70,7 @@ func (uc *RefreshTokenUseCase) Execute(ctx context.Context, input RefreshTokenIn
 
 	// Check if session has expired
 	if session.IsExpired(uc.timeProvider) {
-		// Delete expired session - but don't log error since it's not critical
+		// Delete expired session - but don't log errors since it's not critical
 		_ = uc.authSessionRepo.DeleteByID(ctx, session.ID)
 		return nil, domainErr.ErrExpiredToken
 	}
@@ -84,7 +84,7 @@ func (uc *RefreshTokenUseCase) Execute(ctx context.Context, input RefreshTokenIn
 	if err != nil {
 		uc.logger.Error("Failed to generate tokens", map[string]any{
 			"userId": userID,
-			"error":  err.Error(),
+			"errors":  err.Error(),
 		})
 		return nil, domainErr.ErrTokenGenerationFailed
 	}
@@ -98,7 +98,7 @@ func (uc *RefreshTokenUseCase) Execute(ctx context.Context, input RefreshTokenIn
 	if err != nil {
 		uc.logger.Error("Failed to update session", map[string]any{
 			"sessionId": session.ID.String(),
-			"error":     err.Error(),
+			"errors":     err.Error(),
 		})
 		return nil, err
 	}

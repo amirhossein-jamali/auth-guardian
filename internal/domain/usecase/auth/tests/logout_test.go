@@ -120,8 +120,8 @@ func TestLogoutUseCase_Execute_GetSessionDatabaseError(t *testing.T) {
 		RefreshToken: "existing-token",
 	}
 
-	// Setup expectations - database error
-	dbError := errors.New("database error")
+	// Setup expectations - database errors
+	dbError := errors.New("database errors")
 	authSessionRepo.EXPECT().GetByRefreshToken(mock.Anything, "existing-token").Return(nil, dbError)
 	logger.EXPECT().Error(mock.Anything, mock.Anything).Return()
 
@@ -153,7 +153,7 @@ func TestLogoutUseCase_Execute_DeleteSessionError(t *testing.T) {
 	// Setup expectations
 	authSessionRepo.EXPECT().GetByRefreshToken(mock.Anything, session.RefreshToken).Return(session, nil)
 
-	// Delete session error
+	// Delete session errors
 	deleteError := errors.New("delete session failed")
 	authSessionRepo.EXPECT().DeleteByID(mock.Anything, session.ID).Return(deleteError)
 	logger.EXPECT().Error(mock.Anything, mock.Anything).Return()

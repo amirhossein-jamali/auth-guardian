@@ -9,6 +9,7 @@ import (
 type User struct {
 	ID           ID
 	Email        string
+	PhoneNumber  string
 	PasswordHash string
 	FirstName    string
 	LastName     string
@@ -17,16 +18,17 @@ type User struct {
 	UpdatedAt    time.Time
 }
 
-func NewUser(id ID, email, firstName, lastName string, timeProvider tport.Provider) *User {
+func NewUser(id ID, email, phoneNumber, firstName, lastName string, timeProvider tport.Provider) *User {
 	now := timeProvider.Now()
 	return &User{
-		ID:        id,
-		Email:     email,
-		FirstName: firstName,
-		LastName:  lastName,
-		IsActive:  true,
-		CreatedAt: now,
-		UpdatedAt: now,
+		ID:          id,
+		Email:       email,
+		PhoneNumber: phoneNumber,
+		FirstName:   firstName,
+		LastName:    lastName,
+		IsActive:    true,
+		CreatedAt:   now,
+		UpdatedAt:   now,
 	}
 }
 

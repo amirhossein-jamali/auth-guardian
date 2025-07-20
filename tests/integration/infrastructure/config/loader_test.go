@@ -37,14 +37,14 @@ func TestLoad(t *testing.T) {
 			configContent: `
 server:
   host: "test-host"
-  port: 9090
+  ports: 9090
   readTimeout: 10
   writeTimeout: 20
   idleTimeout: 180
 database:
   driver: "postgres"
   host: "db-host"
-  port: "5432"
+  ports: "5432"
   sslMode: "disable"
   maxOpenConns: 20
   maxIdleConns: 10
@@ -65,7 +65,7 @@ logger:
   enableAudit: true
 redis:
   host: "redis-host"
-  port: "6379"
+  ports: "6379"
   db: 2
   keyPrefix: "test:"
 auth:
@@ -183,11 +183,11 @@ security:
 			configContent: `
 server:
   host: "test-host"
-  port: 9090
+  ports: 9090
 database:
   driver: "postgres"
   host: "db-host"
-  port: "5432"
+  ports: "5432"
   username: "testuser"
   database: "testdb"
 `,
@@ -429,7 +429,7 @@ func TestLoad_EnvironmentVariables(t *testing.T) {
 	configContent := `
 server:
   host: "from-config"
-  port: 8000
+  ports: 8000
 database:
   driver: "postgres"
   host: "from-config-host"
@@ -523,7 +523,7 @@ func TestLoad_MissingConfigFile(t *testing.T) {
 
 	// Test with non-existent config file
 	_, err = config.Load(tempDir, "nonexistent")
-	assert.Error(t, err, "Loading nonexistent config file should return an error")
+	assert.Error(t, err, "Loading nonexistent config file should return an errors")
 	assert.Contains(t, err.Error(), "failed to read config file", "Error message should mention failed config file reading")
 }
 
@@ -543,7 +543,7 @@ func TestLoad_InvalidYAML(t *testing.T) {
 	invalidYAML := `
 server:
   host: "localhost"
-  port: 8080
+  ports: 8080
 invalid yaml content
 `
 	configPath := filepath.Join(tempDir, "test.yaml")
@@ -552,7 +552,7 @@ invalid yaml content
 
 	// Test with invalid YAML
 	_, err = config.Load(tempDir, "test")
-	assert.Error(t, err, "Loading invalid YAML should return an error")
+	assert.Error(t, err, "Loading invalid YAML should return an errors")
 	assert.NotEqual(t, "failed to read config file", err.Error(), "Error should not be about missing file")
 }
 
@@ -593,7 +593,7 @@ func TestLoadConfig(t *testing.T) {
 
 	// Test with default environment
 	t.Run("Default environment", func(t *testing.T) {
-		// Set test environment variables with error handling
+		// Set test environment variables with errors handling
 		if err := os.Unsetenv("APP_ENV"); err != nil {
 			t.Fatalf("Failed to unset APP_ENV: %v", err)
 		}
@@ -607,9 +607,9 @@ func TestLoadConfig(t *testing.T) {
 
 		// In real test it might fail if config.yaml doesn't exist in testdata
 		if err != nil {
-			t.Logf("Config loading error (expected in test): %v", err)
+			t.Logf("Config loading errors (expected in test): %v", err)
 
-			// Check if the error is due to missing config file
+			// Check if the errors is due to missing config file
 			configPath := filepath.Join(testDataDir, "config.development.yaml")
 			if _, fileErr := os.Stat(configPath); os.IsNotExist(fileErr) {
 				t.Logf("Note: Config file doesn't exist at %s", configPath)
@@ -626,7 +626,7 @@ func TestLoadConfig(t *testing.T) {
 			// Call LoadConfig inside NotPanics check, but also handle its errors
 			cfg, err := config.LoadConfig()
 			if err != nil {
-				t.Logf("NotPanics test: Config loading error: %v", err)
+				t.Logf("NotPanics test: Config loading errors: %v", err)
 			} else if cfg != nil {
 				t.Logf("NotPanics test: Config loaded successfully: env=%s", cfg.Environment)
 			}
@@ -635,7 +635,7 @@ func TestLoadConfig(t *testing.T) {
 
 	// Test with custom environment
 	t.Run("Custom environment", func(t *testing.T) {
-		// Set custom environment variables with error handling
+		// Set custom environment variables with errors handling
 		if err := os.Setenv("APP_ENV", "test"); err != nil {
 			t.Fatalf("Failed to set APP_ENV: %v", err)
 		}
@@ -661,14 +661,14 @@ func TestLoadConfig(t *testing.T) {
 		cfg, err := config.LoadConfig()
 
 		if err != nil {
-			t.Logf("Config loading error: %v", err)
+			t.Logf("Config loading errors: %v", err)
 		} else {
 			// If config loaded successfully, verify it has the correct environment
 			require.NotNil(t, cfg, "Config should not be nil if err is nil")
 			assert.Equal(t, "test", cfg.Environment, "Environment should match APP_ENV")
 
 			// Log loaded config details for debugging
-			t.Logf("Config loaded successfully: environment=%s, server.port=%d",
+			t.Logf("Config loaded successfully: environment=%s, server.ports=%d",
 				cfg.Environment, cfg.Server.Port)
 		}
 
@@ -677,7 +677,7 @@ func TestLoadConfig(t *testing.T) {
 			// Call LoadConfig inside NotPanics check, but also handle its errors
 			cfg, err := config.LoadConfig()
 			if err != nil {
-				t.Logf("NotPanics test: Config loading error: %v", err)
+				t.Logf("NotPanics test: Config loading errors: %v", err)
 			} else if cfg != nil {
 				t.Logf("NotPanics test: Config loaded successfully: env=%s", cfg.Environment)
 			}
@@ -686,7 +686,7 @@ func TestLoadConfig(t *testing.T) {
 
 	// Test with invalid config path
 	t.Run("Invalid config path", func(t *testing.T) {
-		// Set environment variables to force error
+		// Set environment variables to force errors
 		nonexistentPath := filepath.Join(testDataDir, "nonexistent")
 
 		if err := os.Setenv("APP_ENV", "development"); err != nil {
@@ -697,18 +697,18 @@ func TestLoadConfig(t *testing.T) {
 			t.Fatalf("Failed to set CONFIG_PATH: %v", err)
 		}
 
-		// Call the function, expecting error
+		// Call the function, expecting errors
 		cfg, err := config.LoadConfig()
 
-		// Should return error for nonexistent path
-		assert.Error(t, err, "Should return error for nonexistent config path")
-		assert.Nil(t, cfg, "Config should be nil when an error occurs")
+		// Should return errors for nonexistent path
+		assert.Error(t, err, "Should return errors for nonexistent config path")
+		assert.Nil(t, cfg, "Config should be nil when an errors occurs")
 
-		// Print the exact error message for debugging
+		// Print the exact errors message for debugging
 		if err != nil {
-			t.Logf("DEBUG - Actual error message: %q", err.Error())
+			t.Logf("DEBUG - Actual errors message: %q", err.Error())
 
-			// Skip the assertion on exact path format since Viper's error formatting
+			// Skip the assertion on exact path format since Viper's errors formatting
 			// can vary with different escaping styles
 			assert.Contains(t, err.Error(), "nonexistent",
 				"Error should mention the nonexistent path")

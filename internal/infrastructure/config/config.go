@@ -10,6 +10,7 @@ type Config struct {
 	Auth        AuthConfig     `mapstructure:"auth"`
 	Metrics     MetricsConfig  `mapstructure:"metrics"`
 	Security    SecurityConfig `mapstructure:"security"`
+	OTP         OTPConfig      `mapstructure:"otp"`
 	Environment string         `mapstructure:"environment"`
 }
 
@@ -101,4 +102,15 @@ type SecurityConfig struct {
 	SuspiciousIPs        []string `mapstructure:"suspiciousIPs"`        // List of suspicious IPs
 	SuspiciousUserAgents []string `mapstructure:"suspiciousUserAgents"` // List of suspicious user agent substrings
 	EnableRiskEvaluation bool     `mapstructure:"enableRiskEvaluation"` // Whether risk evaluation is enabled
+}
+
+// OTPConfig contains settings for OTP functionality
+type OTPConfig struct {
+	Length         int    `mapstructure:"length"`         // Length of OTP codes (default: 6)
+	ExpirySeconds  int    `mapstructure:"expirySeconds"`  // OTP expiry time in seconds (default: 300)
+	CooldownSeconds int   `mapstructure:"cooldownSeconds"` // Cooldown between OTP requests in seconds (default: 60)
+	MaxAttempts    int    `mapstructure:"maxAttempts"`    // Maximum verification attempts (default: 3)
+	SMSProvider    string `mapstructure:"smsProvider"`    // SMS provider service name
+	SMSAPIKey      string `mapstructure:"smsApiKey"`      // API key for SMS service
+	EnableMock     bool   `mapstructure:"enableMock"`     // Enable mock mode (no actual SMS sent)
 }

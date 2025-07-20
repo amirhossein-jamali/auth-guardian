@@ -17,6 +17,7 @@ type Manager struct {
 	config        *Config
 	keyPrefix     string
 	keyValueStore storage.KeyValueStore
+	rateLimiter   RateLimiter
 	logger        *RedisLogger
 	cmdHelper     *CommandHelper
 }
@@ -53,6 +54,9 @@ func (m *Manager) Initialize(ctx context.Context) error {
 
 	// Initialize the key-value store
 	m.keyValueStore = NewRedisKeyValueStore(client)
+	
+	// Initialize the rate limiter
+	m.rateLimiter = NewRedisRateLimiter(client, m.keyPrefix)
 
 	// Initialize command helper
 	m.cmdHelper = NewCommandHelper(client, m.keyPrefix)
@@ -99,6 +103,11 @@ func (m *Manager) GetClient() *redis.Client {
 // GetKeyValueStore returns the Redis key-value store
 func (m *Manager) GetKeyValueStore() storage.KeyValueStore {
 	return m.keyValueStore
+}
+
+// GetRateLimiter returns the Redis rate limiter
+func (m *Manager) GetRateLimiter() RateLimiter {
+	return m.rateLimiter
 }
 
 // GetCommandHelper returns the command helper

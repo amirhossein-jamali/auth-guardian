@@ -49,7 +49,7 @@ func (uc *GetSessionsUseCase) Execute(ctx context.Context, input GetSessionsInpu
 	if err != nil {
 		uc.logger.Error("Failed to get sessions for user", map[string]interface{}{
 			"userId": input.UserID,
-			"error":  err.Error(),
+			"errors":  err.Error(),
 		})
 		return nil, err
 	}

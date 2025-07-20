@@ -55,3 +55,20 @@ auth:
   refreshTokenTTL: 24       # hours
   maxSessionsPerUser: 5     # Maximum concurrent sessions per user
   sessionInactivityTTL: 30  # days
+
+# OTP Configuration
+otp:
+  length: 6                 # Length of the OTP code
+  expirySeconds: 60         # Short expiry for tests
+  maxAttempts: 3            # Maximum number of failed verification attempts
+  cooldownSeconds: 5        # Short cooldown for tests
+  smsProvider: "mock"       # Use mock provider in tests
+  smsApiKey: "test_api_key" # Mock API key
+  enableMock: true          # Enable mock mode for tests
+
+# Twilio Configuration (mock for testing)
+twilio:
+  base_url: "http://twilio-mock:4010"
+  account_sid: "test_account_sid"
+  auth_token: "test_auth_token"
+  from_number: "+15005550006"  # Standard Twilio test number

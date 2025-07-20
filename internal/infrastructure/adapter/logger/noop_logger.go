@@ -42,7 +42,7 @@ func (l *NoopLogger) Warn(message string, fields map[string]any) {
 	// Do nothing
 }
 
-// Error logs error messages
+// Error logs errors messages
 func (l *NoopLogger) Error(message string, fields map[string]any) {
 	// Do nothing
 }

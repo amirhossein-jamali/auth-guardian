@@ -7,9 +7,9 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// Common Redis error types
+// Common Redis errors types
 var (
-	ErrRedisConnection      = errors.New("redis connection error")
+	ErrRedisConnection      = errors.New("redis connection errors")
 	ErrRedisTimeout         = errors.New("redis operation timed out")
 	ErrRedisKeyNotFound     = errors.New("redis key not found")
 	ErrRedisCommandFailed   = errors.New("redis command failed")
@@ -29,7 +29,7 @@ func MapError(err error) error {
 		return ErrRedisKeyNotFound
 	}
 
-	// Check for various errors based on error strings
+	// Check for various errors based on errors strings
 	errorString := err.Error()
 
 	switch {
@@ -42,7 +42,7 @@ func MapError(err error) error {
 	}
 }
 
-// Helper functions to identify error types
+// Helper functions to identify errors types
 func isConnectionError(errorString string) bool {
 	connectionErrors := []string{
 		"connection refused",

@@ -16,13 +16,44 @@ func TestValidateEmail(t *testing.T) {
 	}{
 		{"Valid email", "user@example.com", nil},
 		{"Invalid email", "invalid-email", domainErr.ErrInvalidEmail},
-		{"Empty email", "", domainErr.ErrInvalidEmail},
+		// Empty email is now valid (optional)
+		{"Empty email", "", nil},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			err := validator.ValidateEmail(test.email)
 			assert.Equal(t, test.expected, err)
+		})
+	}
+}
+
+func TestValidatePhoneNumber(t *testing.T) {
+	tests := []struct {
+		name        string
+		phoneNumber string
+		expected    bool
+	}{
+		{"Valid phone number", "+989123456789", true},
+		{"Valid phone number without plus", "989123456789", true},
+		{"Valid phone number with minimum digits", "12345678", true},
+		{"Valid phone number with maximum digits", "123456789012345", true},
+		{"Empty phone number", "", false},
+		{"Too short phone number", "1234567", false},
+		{"Too long phone number", "1234567890123456", false},
+		{"Contains non-digit characters", "+123abc45678", false},
+		{"Contains spaces", "+1 234 567 890", false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := validator.ValidatePhoneNumber(test.phoneNumber)
+			if test.expected {
+				assert.Nil(t, err)
+			} else {
+				assert.NotNil(t, err)
+				assert.True(t, domainErr.IsValidationError(err))
+			}
 		})
 	}
 }
@@ -46,7 +77,7 @@ func TestValidatePassword(t *testing.T) {
 			if test.expected == nil {
 				assert.Nil(t, err)
 			} else if _, ok := test.expected.(domainErr.ValidationError); ok {
-				// For ValidationError type, just check if the error is of same type
+				// For ValidationError type, just check if the errors is of same type
 				assert.True(t, domainErr.IsValidationError(err))
 			} else {
 				// For other errors, compare directly
@@ -76,7 +107,7 @@ func TestValidateName(t *testing.T) {
 			if test.expected == nil {
 				assert.Nil(t, err)
 			} else {
-				// Check error type
+				// Check errors type
 				assert.True(t, domainErr.IsValidationError(err))
 			}
 		})
@@ -105,7 +136,7 @@ func TestValidateID(t *testing.T) {
 			if test.expected == nil {
 				assert.Nil(t, err)
 			} else {
-				// Check error type
+				// Check errors type
 				assert.True(t, domainErr.IsValidationError(err))
 			}
 		})

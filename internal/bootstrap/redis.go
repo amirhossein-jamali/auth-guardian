@@ -75,7 +75,7 @@ func SetupRedis(ctx context.Context, cfg *config.Config, logger logger.Logger) (
 		return nil, nil
 	}
 
-	// Convert Redis port string to int
+	// Convert Redis ports string to int
 	redisPort, _ := strconv.Atoi(cfg.Redis.Port)
 
 	// Create Redis configuration
@@ -91,7 +91,7 @@ func SetupRedis(ctx context.Context, cfg *config.Config, logger logger.Logger) (
 
 	// Connect to Redis
 	if err := redisManager.Initialize(ctx); err != nil {
-		logger.Warn("Failed to connect to Redis, continuing without it", map[string]any{"error": err.Error()})
+		logger.Warn("Failed to connect to Redis, continuing without it", map[string]any{"errors": err.Error()})
 		return nil, nil
 	}
 

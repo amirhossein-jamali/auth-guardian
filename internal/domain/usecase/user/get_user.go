@@ -56,7 +56,7 @@ func (uc *GetUserUseCase) Execute(ctx context.Context, input GetUserInput) (*Get
 	if err != nil {
 		uc.logger.Error("Failed to get user by ID", map[string]any{
 			"userId": input.UserID,
-			"error":  err.Error(),
+			"errors":  err.Error(),
 		})
 		return nil, err
 	}

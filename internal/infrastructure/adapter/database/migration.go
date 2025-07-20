@@ -39,7 +39,7 @@ func (m *MigrationManager) MigrateAll() error {
 	// Create migration version table first
 	if err := m.db.AutoMigrate(&model.MigrationVersion{}); err != nil {
 		m.logger.Error("Failed to create migration version table", map[string]any{
-			"error": err.Error(),
+			"errors": err.Error(),
 		})
 		return err
 	}
@@ -48,6 +48,7 @@ func (m *MigrationManager) MigrateAll() error {
 	models := []interface{}{
 		&model.User{},
 		&model.AuthSession{},
+		&model.OTP{},
 		// Add any other models here
 	}
 
@@ -65,7 +66,7 @@ func (m *MigrationManager) MigrateAll() error {
 		if err := m.db.AutoMigrate(modelEntity); err != nil {
 			m.logger.Error("Failed to migrate table", map[string]any{
 				"table": tableName,
-				"error": err.Error(),
+				"errors": err.Error(),
 			})
 			return err
 		}
@@ -75,7 +76,7 @@ func (m *MigrationManager) MigrateAll() error {
 	m.logger.Info("Updating refresh_token column type", map[string]any{})
 	if err := m.db.Exec("ALTER TABLE auth_sessions ALTER COLUMN refresh_token TYPE TEXT").Error; err != nil {
 		m.logger.Warn("Failed to alter refresh_token column type (may already be text)", map[string]any{
-			"error": err.Error(),
+			"errors": err.Error(),
 		})
 		// Continue anyway, as this might fail if column is already TEXT
 	}
@@ -89,7 +90,7 @@ func (m *MigrationManager) MigrateAll() error {
 	if err := m.setVersion(context.Background(), CurrentSchemaVersion); err != nil {
 		m.logger.Error("Failed to update schema version", map[string]any{
 			"version": CurrentSchemaVersion,
-			"error":   err.Error(),
+			"errors":   err.Error(),
 		})
 		return err
 	}
@@ -104,7 +105,7 @@ func (m *MigrationManager) MigrateAll() error {
 func (m *MigrationManager) addForeignKeyConstraints() error {
 	m.logger.Info("Adding foreign key constraints", map[string]any{})
 
-	// Direct approach that bypasses the type mismatch error
+	// Direct approach that bypasses the type mismatch errors
 	err := m.db.Exec(`
 		ALTER TABLE auth_sessions 
 		DROP CONSTRAINT IF EXISTS fk_auth_sessions_user_id;
@@ -118,7 +119,7 @@ func (m *MigrationManager) addForeignKeyConstraints() error {
 
 	if err != nil {
 		m.logger.Error("Failed to add foreign key constraints", map[string]any{
-			"error": err.Error(),
+			"errors": err.Error(),
 		})
 		return err
 	}

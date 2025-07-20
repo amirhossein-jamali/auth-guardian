@@ -565,11 +565,11 @@ func TestLoginUseCase_Execute_DatabaseError(t *testing.T) {
 	// Metrics call for login attempt
 	metricsRecorder.EXPECT().IncCounter("login_attempts", map[string]string{}).Return()
 
-	// Database error
+	// Database errors
 	dbError := errors.New("database connection failed")
 	userRepo.EXPECT().GetByEmail(mock.Anything, "test@example.com").Return(nil, dbError)
 
-	// Logger error
+	// Logger errors
 	logger.EXPECT().Error(mock.Anything, mock.Anything).Return()
 
 	// Create use case
@@ -625,11 +625,11 @@ func TestLoginUseCase_Execute_SessionCreationError(t *testing.T) {
 	authSessionRepo.EXPECT().EnsureSessionLimit(mock.Anything, testUser.ID, maxSessions).Return(nil)
 	tokenService.EXPECT().GenerateTokens(testUser.ID.String()).Return(accessToken, refreshToken, expiresAt, nil)
 
-	// Session creator returns an error
+	// Session creator returns an errors
 	sessionCreator.On("CreateSession", mock.Anything, testUser.ID, refreshToken, "Mozilla/5.0", "192.168.1.1", expiresAt).
 		Return(errors.New("session creation failed"))
 
-	// Logger warning for session creation error
+	// Logger warning for session creation errors
 	logger.EXPECT().Warn(mock.Anything, mock.Anything).Return()
 
 	// Time for duration measurement
@@ -655,10 +655,10 @@ func TestLoginUseCase_Execute_SessionCreationError(t *testing.T) {
 		auth.WithMetricsRecorder(metricsRecorder),
 	)
 
-	// Act - should still succeed despite session creation error
+	// Act - should still succeed despite session creation errors
 	result, err := useCase.Execute(context.Background(), input)
 
-	// Assert - login should succeed even with session creation error
+	// Assert - login should succeed even with session creation errors
 	require.NoError(t, err)
 	require.NotNil(t, result)
 	assert.Equal(t, testUser, result.User)
@@ -698,10 +698,10 @@ func TestLoginUseCase_Execute_TokenGenerationError(t *testing.T) {
 	passwordHasher.EXPECT().VerifyPassword("hashed-password-123", "Password123!").Return(true, nil)
 	authSessionRepo.EXPECT().EnsureSessionLimit(mock.Anything, testUser.ID, maxSessions).Return(nil)
 
-	// Token service returns an error
+	// Token service returns an errors
 	tokenService.EXPECT().GenerateTokens(testUser.ID.String()).Return("", "", int64(0), tokenError)
 
-	// Logger error
+	// Logger errors
 	logger.EXPECT().Error(mock.Anything, mock.Anything).Return()
 
 	// Create use case

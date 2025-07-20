@@ -43,7 +43,7 @@ RUN echo '#!/bin/sh' > /app/entrypoint.sh && \
     echo './main' >> /app/entrypoint.sh && \
     chmod +x /app/entrypoint.sh
 
-# Expose port
+# Expose ports
 EXPOSE 8080
 
 # Set environment variables for config path, but don't hardcode ENV

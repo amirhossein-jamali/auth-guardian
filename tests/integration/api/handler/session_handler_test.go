@@ -257,7 +257,7 @@ func TestGetUserSessions(t *testing.T) {
 		assert.Equal(t, http.StatusUnauthorized, w.Code)
 	})
 
-	t.Run("Error - repository error", func(t *testing.T) {
+	t.Run("Error - repository errors", func(t *testing.T) {
 		// Create new mocks specific for this test
 		testAuthSessionRepo := mockRepo.NewMockAuthSessionRepository(t)
 		testLogger := mockLogger.NewMockLogger(t)
@@ -276,15 +276,15 @@ func TestGetUserSessions(t *testing.T) {
 
 		userID := "123e4567-e89b-12d3-a456-426614174000"
 
-		// Setup expectations - repository returns error
-		repoError := fmt.Errorf("database error")
+		// Setup expectations - repository returns errors
+		repoError := fmt.Errorf("database errors")
 
 		// Strict call order expectations
 		testAuthSessionRepo.EXPECT().GetByUserID(mock.Anything, entity.NewID(userID)).Return(nil, repoError)
 
-		// Expect logger to record error - use Once() to ensure it's called exactly once
+		// Expect logger to record errors - use Once() to ensure it's called exactly once
 		testLogger.EXPECT().Error("Failed to get sessions for user", mock.MatchedBy(func(data map[string]interface{}) bool {
-			return data["userId"] == userID && data["error"] == repoError.Error()
+			return data["userId"] == userID && data["errors"] == repoError.Error()
 		})).Return().Once()
 
 		// Perform request
@@ -300,10 +300,10 @@ func TestGetUserSessions(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
 
-		// Verify HTTP response body indicates an error
+		// Verify HTTP response body indicates an errors
 		var response map[string]interface{}
 		err = json.Unmarshal(w.Body.Bytes(), &response)
 		require.NoError(t, err)
-		assert.Contains(t, response, "error")
+		assert.Contains(t, response, "errors")
 	})
 }

@@ -293,7 +293,7 @@ func TestUpdateCurrentUser_EmailAlreadyExists(t *testing.T) {
 	var errResponse map[string]string
 	err = json.Unmarshal(w.Body.Bytes(), &errResponse)
 	require.NoError(t, err)
-	assert.Equal(t, "email_exists", errResponse["code"]) // The actual error code from the handler
+	assert.Equal(t, "email_exists", errResponse["code"]) // The actual errors code from the handler
 }
 
 func TestUpdateCurrentUser_NoChanges(t *testing.T) {

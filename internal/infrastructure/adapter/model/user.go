@@ -7,7 +7,8 @@ import (
 // User represents a user in the database
 type User struct {
 	ID           string `gorm:"primaryKey;type:uuid"`
-	Email        string `gorm:"uniqueIndex;not null"`
+	Email        string `gorm:"uniqueIndex"`
+	PhoneNumber  string `gorm:"uniqueIndex;not null"`
 	PasswordHash string `gorm:"not null"`
 	FirstName    string
 	LastName     string

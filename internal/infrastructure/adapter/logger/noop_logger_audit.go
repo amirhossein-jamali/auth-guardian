@@ -26,3 +26,9 @@ func (l *NoopAuditLogger) Flush() error {
 	// Do nothing
 	return nil
 }
+
+// Log implements AuditLogger interface but does nothing
+func (l *NoopAuditLogger) Log(ctx context.Context, event lport.AuditEvent) error {
+	// Do nothing
+	return nil
+}

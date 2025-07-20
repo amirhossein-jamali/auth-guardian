@@ -79,7 +79,7 @@ func (s *JWTTokenService) GenerateTokens(userID string) (string, string, int64, 
 	if err != nil {
 		s.logger.Error("Failed to sign access token", map[string]any{
 			"userId": userID,
-			"error":  err.Error(),
+			"errors":  err.Error(),
 		})
 		return "", "", 0, err
 	}
@@ -103,7 +103,7 @@ func (s *JWTTokenService) GenerateTokens(userID string) (string, string, int64, 
 	if err != nil {
 		s.logger.Error("Failed to sign refresh token", map[string]any{
 			"userId": userID,
-			"error":  err.Error(),
+			"errors":  err.Error(),
 		})
 		return "", "", 0, err
 	}
@@ -112,7 +112,7 @@ func (s *JWTTokenService) GenerateTokens(userID string) (string, string, int64, 
 	if err := s.tokenStore.StoreToken(refreshTokenID, userID, refreshExpires.Unix()); err != nil {
 		s.logger.Error("Failed to store refresh token", map[string]any{
 			"userId": userID,
-			"error":  err.Error(),
+			"errors":  err.Error(),
 		})
 		return "", "", 0, err
 	}
@@ -134,7 +134,7 @@ func (s *JWTTokenService) ValidateAccessToken(tokenString string) (string, error
 	// Handle parsing errors
 	if err != nil {
 		s.logger.Debug("Failed to parse access t", map[string]any{
-			"error": err.Error(),
+			"errors": err.Error(),
 		})
 		return "", err
 	}
@@ -166,7 +166,7 @@ func (s *JWTTokenService) ValidateRefreshToken(tokenString string) (string, erro
 	// Handle parsing errors
 	if err != nil {
 		s.logger.Debug("Failed to parse refresh t", map[string]any{
-			"error": err.Error(),
+			"errors": err.Error(),
 		})
 		return "", err
 	}
@@ -183,7 +183,7 @@ func (s *JWTTokenService) ValidateRefreshToken(tokenString string) (string, erro
 		if err != nil {
 			s.logger.Error("Failed to check if t is revoked", map[string]any{
 				"tokenId": claims.ID,
-				"error":   err.Error(),
+				"errors":   err.Error(),
 			})
 			return "", err
 		}
@@ -197,7 +197,7 @@ func (s *JWTTokenService) ValidateRefreshToken(tokenString string) (string, erro
 		if err != nil {
 			s.logger.Error("Failed to get user ID from t store", map[string]any{
 				"tokenId": claims.ID,
-				"error":   err.Error(),
+				"errors":   err.Error(),
 			})
 			return "", err
 		}
@@ -219,7 +219,7 @@ func (s *JWTTokenService) RevokeToken(tokenString string) error {
 	t, _, err := jwt.NewParser().ParseUnverified(tokenString, &Claims{})
 	if err != nil {
 		s.logger.Error("Failed to parse t for revocation", map[string]any{
-			"error": err.Error(),
+			"errors": err.Error(),
 		})
 		return err
 	}
@@ -235,7 +235,7 @@ func (s *JWTTokenService) RevokeToken(tokenString string) error {
 		if err := s.tokenStore.RevokeToken(claims.ID); err != nil {
 			s.logger.Error("Failed to revoke t", map[string]any{
 				"tokenId": claims.ID,
-				"error":   err.Error(),
+				"errors":   err.Error(),
 			})
 			return err
 		}
@@ -255,7 +255,7 @@ func (s *JWTTokenService) IsTokenRevoked(tokenString string) (bool, error) {
 	t, _, err := jwt.NewParser().ParseUnverified(tokenString, &Claims{})
 	if err != nil {
 		s.logger.Error("Failed to parse t for revocation check", map[string]any{
-			"error": err.Error(),
+			"errors": err.Error(),
 		})
 		return false, err
 	}
@@ -272,7 +272,7 @@ func (s *JWTTokenService) IsTokenRevoked(tokenString string) (bool, error) {
 		if err != nil {
 			s.logger.Error("Failed to check if t is revoked", map[string]any{
 				"tokenId": claims.ID,
-				"error":   err.Error(),
+				"errors":   err.Error(),
 			})
 			return false, err
 		}

@@ -58,7 +58,7 @@ func (uc *LogoutOtherSessionsUseCase) Execute(ctx context.Context, input LogoutO
 	currentSession, err := uc.authSessionRepo.GetByRefreshToken(ctx, input.RefreshToken)
 	if err != nil {
 		uc.logger.Error("Failed to get session by refresh token", map[string]any{
-			"error": err.Error(),
+			"errors": err.Error(),
 		})
 		return err
 	}
@@ -73,7 +73,7 @@ func (uc *LogoutOtherSessionsUseCase) Execute(ctx context.Context, input LogoutO
 		uc.logger.Error("Failed to delete other sessions", map[string]any{
 			"userId":    currentSession.UserID.String(),
 			"sessionId": currentSession.ID.String(),
-			"error":     err.Error(),
+			"errors":     err.Error(),
 		})
 		return err
 	}

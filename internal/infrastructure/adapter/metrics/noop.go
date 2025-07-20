@@ -2,7 +2,7 @@ package metrics
 
 import "github.com/amirhossein-jamali/auth-guardian/internal/domain/port/metrics"
 
-// NoopRecorder is a no-operation implementation of the MetricsRecorder port
+// NoopRecorder is a no-operation implementation of the MetricsRecorder ports
 // It doesn't record any metrics and is used when metrics collection is disabled
 type NoopRecorder struct{}
 

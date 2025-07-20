@@ -27,20 +27,27 @@ var (
 	ErrInvalidFirstName      = errors.New("first name is required")
 	ErrInvalidLastName       = errors.New("last name is required")
 	ErrNotFound              = errors.New("resource not found")
-	ErrInternalServer        = errors.New("internal server error")
+	ErrInternalServer        = errors.New("internal server errors")
 	ErrDatabaseOperation     = errors.New("database operation failed")
 	ErrTimeout               = errors.New("operation timed out")
+
+	// OTP related errors
+	ErrInvalidOTP          = errors.New("invalid OTP code")
+	ErrExpiredOTP          = errors.New("OTP has expired")
+	ErrUsedOTP             = errors.New("OTP has already been used")
+	ErrMaxAttemptsExceeded = errors.New("maximum verification attempts exceeded")
+	ErrTooManyRequests     = errors.New("too many requests, please try again later")
 )
 
-// ValidationError represents an error that occurred during validation
+// ValidationError represents an errors that occurred during validation
 type ValidationError struct {
 	Field   string
 	Message string
 }
 
-// Error returns the error message for a ValidationError
+// Error returns the errors message for a ValidationError
 func (e ValidationError) Error() string {
-	return fmt.Sprintf("validation error: %s: %s", e.Field, e.Message)
+	return fmt.Sprintf("validation errors: %s: %s", e.Field, e.Message)
 }
 
 // NewValidationError creates a new ValidationError
@@ -51,16 +58,35 @@ func NewValidationError(field, message string) ValidationError {
 	}
 }
 
-// AuthorizationError represents an error that occurred during authorization
+// ThrottlingError represents an error for rate-limited operations
+type ThrottlingError struct {
+	Message       string
+	RetryAfterSec int
+}
+
+// Error returns the error message for a ThrottlingError
+func (e ThrottlingError) Error() string {
+	return fmt.Sprintf("%s (retry after %d seconds)", e.Message, e.RetryAfterSec)
+}
+
+// NewThrottlingError creates a new ThrottlingError
+func NewThrottlingError(message string, retryAfterSec int) ThrottlingError {
+	return ThrottlingError{
+		Message:       message,
+		RetryAfterSec: retryAfterSec,
+	}
+}
+
+// AuthorizationError represents an errors that occurred during authorization
 type AuthorizationError struct {
 	Resource string
 	Action   string
 	Message  string
 }
 
-// Error returns the error message for an AuthorizationError
+// Error returns the errors message for an AuthorizationError
 func (e AuthorizationError) Error() string {
-	return fmt.Sprintf("authorization error: cannot %s %s: %s", e.Action, e.Resource, e.Message)
+	return fmt.Sprintf("authorization errors: cannot %s %s: %s", e.Action, e.Resource, e.Message)
 }
 
 // NewAuthorizationError creates a new AuthorizationError
@@ -72,21 +98,35 @@ func NewAuthorizationError(resource, action, message string) AuthorizationError 
 	}
 }
 
-// IsValidationError checks if an error is a ValidationError
+// IsValidationError checks if an errors is a ValidationError
 func IsValidationError(err error) bool {
 	var validationError ValidationError
 	ok := errors.As(err, &validationError)
 	return ok
 }
 
-// IsAuthorizationError checks if an error is an AuthorizationError
+// IsThrottlingError checks if an error is a ThrottlingError
+func IsThrottlingError(err error) bool {
+	var throttlingError ThrottlingError
+	ok := errors.As(err, &throttlingError)
+	return ok
+}
+
+// IsAuthorizationError checks if an errors is an AuthorizationError
 func IsAuthorizationError(err error) bool {
 	var authorizationError AuthorizationError
 	ok := errors.As(err, &authorizationError)
 	return ok
 }
 
-// CodeError returns an appropriate HTTP status code for a given error
+// IsNotFound checks if an error is a not found error
+func IsNotFound(err error) bool {
+	return errors.Is(err, ErrNotFound) ||
+		errors.Is(err, ErrUserNotFound) ||
+		errors.Is(err, ErrSessionNotFound)
+}
+
+// CodeError returns an appropriate HTTP status code for a given errors
 func CodeError(err error) int {
 	switch {
 	case errors.Is(err, ErrInvalidCredentials),
@@ -95,7 +135,8 @@ func CodeError(err error) int {
 		return 401 // Unauthorized
 
 	case errors.Is(err, ErrSessionNotFound),
-		errors.Is(err, ErrUserNotFound):
+		errors.Is(err, ErrUserNotFound),
+		errors.Is(err, ErrNotFound):
 		return 404 // Not Found
 
 	case errors.Is(err, ErrEmailAlreadyExists),
@@ -104,8 +145,16 @@ func CodeError(err error) int {
 		errors.Is(err, ErrPasswordTooWeak),
 		errors.Is(err, ErrPasswordMismatch),
 		errors.Is(err, ErrMaxSessionsReached),
+		errors.Is(err, ErrInvalidOTP),
+		errors.Is(err, ErrExpiredOTP),
+		errors.Is(err, ErrUsedOTP),
+		errors.Is(err, ErrMaxAttemptsExceeded),
 		IsValidationError(err):
 		return 400 // Bad Request
+
+	case errors.Is(err, ErrTooManyRequests),
+		IsThrottlingError(err):
+		return 429 // Too Many Requests
 
 	case IsAuthorizationError(err):
 		return 403 // Forbidden
@@ -118,7 +167,7 @@ func CodeError(err error) int {
 	}
 }
 
-// UserFriendlyMessage returns a user-friendly message for a given error
+// UserFriendlyMessage returns a user-friendly message for a given errors
 func UserFriendlyMessage(err error) string {
 	switch {
 	case errors.Is(err, ErrEmailAlreadyExists):
@@ -150,6 +199,26 @@ func UserFriendlyMessage(err error) string {
 	case errors.Is(err, ErrUserDeactivated):
 		return "Your account has been deactivated. Please contact support for assistance."
 
+	case errors.Is(err, ErrInvalidOTP):
+		return "Invalid OTP code. Please check and try again."
+
+	case errors.Is(err, ErrExpiredOTP):
+		return "OTP has expired. Please request a new one."
+
+	case errors.Is(err, ErrUsedOTP):
+		return "This OTP has already been used. Please request a new one."
+
+	case errors.Is(err, ErrMaxAttemptsExceeded):
+		return "Too many failed attempts. Please request a new OTP."
+
+	case errors.Is(err, ErrTooManyRequests):
+		return "Too many requests. Please try again later."
+
+	case IsThrottlingError(err):
+		var throttlingError ThrottlingError
+		errors.As(err, &throttlingError)
+		return fmt.Sprintf("Please wait %d seconds before requesting another OTP.", throttlingError.RetryAfterSec)
+
 	case IsValidationError(err):
 		return err.Error()
 
@@ -157,6 +226,6 @@ func UserFriendlyMessage(err error) string {
 		return "You do not have permission to perform this action."
 
 	default:
-		return "An unexpected error occurred. Please try again later or contact support if the problem persists."
+		return "An unexpected errors occurred. Please try again later or contact support if the problem persists."
 	}
 }

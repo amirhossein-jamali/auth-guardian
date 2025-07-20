@@ -7,8 +7,9 @@ import (
 
 // IsValidEmail checks if an email has valid format
 func IsValidEmail(email string) bool {
+	// Allow empty email (optional)
 	if email == "" {
-		return false
+		return true
 	}
 
 	// Trim spaces
@@ -24,5 +25,9 @@ func IsValidEmail(email string) bool {
 
 // NormalizeEmail normalizes an email address (trims spaces, lowercase)
 func NormalizeEmail(email string) string {
+	// Return empty string if email is empty
+	if email == "" {
+		return ""
+	}
 	return strings.ToLower(strings.TrimSpace(email))
 }

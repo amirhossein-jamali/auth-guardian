@@ -35,7 +35,7 @@ func (e *errorHandlerWithMocks) httpError(err error) (int, *apiErrors.ErrorRespo
 	// Use our mocked message function
 	message := e.getMessage(err)
 
-	// Map domain errors to error codes for the API response
+	// Map domain errors to errors codes for the API response
 	var errorCode string
 	switch {
 	case errors.Is(err, domainErr.ErrInvalidCredentials):
@@ -202,21 +202,21 @@ func TestHTTPError(t *testing.T) {
 		},
 		{
 			name:           "Authorization Error",
-			err:            errors.New("custom authorization error"),
+			err:            errors.New("custom authorization errors"),
 			expectedStatus: http.StatusForbidden,
 			expectedCode:   "forbidden",
 			isAuth:         true,
 		},
 		{
 			name:           "Validation Error",
-			err:            errors.New("custom validation error"),
+			err:            errors.New("custom validation errors"),
 			expectedStatus: http.StatusBadRequest,
 			expectedCode:   "validation_error",
 			isValidation:   true,
 		},
 		{
 			name:           "Unknown Error",
-			err:            errors.New("some unknown error"),
+			err:            errors.New("some unknown errors"),
 			expectedStatus: http.StatusInternalServerError,
 			expectedCode:   "unknown_error",
 		},
@@ -244,7 +244,7 @@ func TestHTTPError(t *testing.T) {
 			// Also call the real function to compare
 			realStatusCode, realResponse := apiErrors.HTTPError(tc.err)
 
-			// For known error types, both implementations should match
+			// For known errors types, both implementations should match
 			if !tc.isAuth && !errors.Is(tc.err, domainErr.ErrInvalidCredentials) && !tc.isValidation {
 				assert.Equal(t, realStatusCode, statusCode, "Status code should match real implementation")
 				assert.Equal(t, realResponse.Code, response.Code, "Error code should match real implementation")
@@ -253,7 +253,7 @@ func TestHTTPError(t *testing.T) {
 			// Assert status code
 			assert.Equal(t, tc.expectedStatus, statusCode, "Status code should match expected")
 
-			// Assert error code
+			// Assert errors code
 			assert.Equal(t, tc.expectedCode, response.Code, "Error code should match expected")
 
 			// Assert message is not empty
@@ -262,11 +262,11 @@ func TestHTTPError(t *testing.T) {
 	}
 }
 
-// TestHTTPErrorMessage verifies that the error messages are correctly passed through
+// TestHTTPErrorMessage verifies that the errors messages are correctly passed through
 func TestHTTPErrorMessage(t *testing.T) {
-	// Create a custom error with a known user-friendly message
-	customErr := errors.New("custom error")
-	expectedMessage := "This is a user-friendly error message"
+	// Create a custom errors with a known user-friendly message
+	customErr := errors.New("custom errors")
+	expectedMessage := "This is a user-friendly errors message"
 
 	// Create handler with mocks
 	handler := &errorHandlerWithMocks{
@@ -293,7 +293,7 @@ func TestHTTPErrorMessage(t *testing.T) {
 	assert.Equal(t, realMessage, realResponse.Error, "Real function should use domain message")
 }
 
-// wrapError creates a simple wrapped error to simulate errors.Wrap functionality
+// wrapError creates a simple wrapped errors to simulate errors.Wrap functionality
 type wrappedError struct {
 	err     error
 	message string
@@ -319,13 +319,13 @@ func wrapError(err error, message string) error {
 	}
 }
 
-// TestHTTPErrorWithNilError tests the behavior when nil error is passed
+// TestHTTPErrorWithNilError tests the behavior when nil errors is passed
 func TestHTTPErrorWithNilError(t *testing.T) {
-	// Call the real function with nil error
+	// Call the real function with nil errors
 	statusCode, response := apiErrors.HTTPError(nil)
 
-	// With nil error, we expect an internal server error with unknown_error code
-	assert.Equal(t, http.StatusInternalServerError, statusCode, "Status code should be internal server error")
+	// With nil errors, we expect an internal server errors with unknown_error code
+	assert.Equal(t, http.StatusInternalServerError, statusCode, "Status code should be internal server errors")
 	assert.Equal(t, "unknown_error", response.Code, "Error code should be unknown_error")
 	assert.NotEmpty(t, response.Error, "Error message should not be empty")
 }
@@ -353,7 +353,7 @@ func TestHTTPErrorWithWrappedErrors(t *testing.T) {
 		},
 		{
 			name:           "Wrapped Unknown Error",
-			err:            wrapError(errors.New("some unknown error"), "with context"),
+			err:            wrapError(errors.New("some unknown errors"), "with context"),
 			expectedStatus: http.StatusInternalServerError,
 			expectedCode:   "unknown_error",
 		},
@@ -377,7 +377,7 @@ func TestHTTPErrorWithWrappedErrors(t *testing.T) {
 			// Call our mock handler which should respect errors.Is
 			statusCode, response := handler.httpError(tc.err)
 
-			// Assert expected status code and error code
+			// Assert expected status code and errors code
 			assert.Equal(t, tc.expectedStatus, statusCode, "Status code should match expected")
 			assert.Equal(t, tc.expectedCode, response.Code, "Error code should match expected")
 			assert.NotEmpty(t, response.Error, "Error message should not be empty")
@@ -385,13 +385,13 @@ func TestHTTPErrorWithWrappedErrors(t *testing.T) {
 			// Also call real handler for comparison (but we won't assert on its results)
 			// This is just to demonstrate the difference in behavior
 			realStatusCode, realResponse := apiErrors.HTTPError(tc.err)
-			t.Logf("Real handler returned status code %d and error code %s",
+			t.Logf("Real handler returned status code %d and errors code %s",
 				realStatusCode, realResponse.Code)
 		})
 	}
 }
 
-// TestHTTPErrorWithCustomStatusCodes tests custom error status codes
+// TestHTTPErrorWithCustomStatusCodes tests custom errors status codes
 func TestHTTPErrorWithCustomStatusCodes(t *testing.T) {
 	// Define custom errors with specific status codes
 	customStatusCodes := map[error]int{
@@ -413,14 +413,14 @@ func TestHTTPErrorWithCustomStatusCodes(t *testing.T) {
 			// We can't test this with the real handler unless we modify the real code to accept custom codes
 			_, response := handler.httpError(err)
 
-			// Verify error details
+			// Verify errors details
 			assert.NotEmpty(t, response.Error, "Error message should not be empty")
 			assert.Equal(t, "unknown_error", response.Code, "Error code for custom status should be unknown_error")
 		})
 	}
 }
 
-// TestConcurrentErrorHandling tests error handling in a concurrent context
+// TestConcurrentErrorHandling tests errors handling in a concurrent context
 func TestConcurrentErrorHandling(t *testing.T) {
 	// Create a set of errs to test
 	errs := []error{
@@ -428,7 +428,7 @@ func TestConcurrentErrorHandling(t *testing.T) {
 		domainErr.ErrTokenExpired,
 		domainErr.ErrEmailAlreadyExists,
 		domainErr.ErrInternalServer,
-		errors.New("unknown error"),
+		errors.New("unknown errors"),
 	}
 
 	// Use channel to collect results
@@ -448,7 +448,7 @@ func TestConcurrentErrorHandling(t *testing.T) {
 
 	// Check all results
 	for i := 0; i < len(errs); i++ {
-		assert.True(t, <-results, "Concurrent error handling should produce valid results")
+		assert.True(t, <-results, "Concurrent errors handling should produce valid results")
 	}
 }
 
@@ -456,30 +456,30 @@ func TestConcurrentErrorHandling(t *testing.T) {
 func TestErrorResponseFormat(t *testing.T) {
 	// Create test response
 	response := &apiErrors.ErrorResponse{
-		Error: "test error message",
+		Error: "test errors message",
 		Code:  "test_error_code",
 	}
 
 	// Verify fields
-	assert.Equal(t, "test error message", response.Error, "Error message field should match")
+	assert.Equal(t, "test errors message", response.Error, "Error message field should match")
 	assert.Equal(t, "test_error_code", response.Code, "Error code field should match")
 }
 
-// TestEmptyErrorString verifies behavior with empty error strings
+// TestEmptyErrorString verifies behavior with empty errors strings
 func TestEmptyErrorString(t *testing.T) {
-	// Create an error that returns empty string
+	// Create an errors that returns empty string
 	emptyErr := &customEmptyError{}
 
-	// Call the error handler
+	// Call the errors handler
 	statusCode, response := apiErrors.HTTPError(emptyErr)
 
 	// Verify that we still get appropriate defaults
-	assert.Equal(t, http.StatusInternalServerError, statusCode, "Status code should be internal server error")
+	assert.Equal(t, http.StatusInternalServerError, statusCode, "Status code should be internal server errors")
 	assert.Equal(t, "unknown_error", response.Code, "Error code should be unknown_error")
-	assert.NotEmpty(t, response.Error, "Error message should not be empty even when error string is empty")
+	assert.NotEmpty(t, response.Error, "Error message should not be empty even when errors string is empty")
 }
 
-// customEmptyError is a special error for testing that returns an empty string
+// customEmptyError is a special errors for testing that returns an empty string
 type customEmptyError struct{}
 
 func (e *customEmptyError) Error() string {

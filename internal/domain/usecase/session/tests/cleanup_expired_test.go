@@ -298,7 +298,7 @@ func TestCleanupExpiredSessionsUseCase_Execute_DatabaseError(t *testing.T) {
 	now := time.Now()
 	startTime := now
 	defaultTimeout := 30 * time.Second
-	dbError := errors.New("database error")
+	dbError := errors.New("database errors")
 
 	// Setup expectations
 	timeProvider.EXPECT().Now().Return(startTime).Times(2)
@@ -308,7 +308,7 @@ func TestCleanupExpiredSessionsUseCase_Execute_DatabaseError(t *testing.T) {
 	cancelFunc := func() {}
 	timeProvider.EXPECT().WithTimeout(mock.Anything, defaultTimeout).Return(timeoutCtx, cancelFunc)
 
-	// BatchDeleteExpired returns error
+	// BatchDeleteExpired returns errors
 	authSessionRepo.EXPECT().BatchDeleteExpired(timeoutCtx, now, batchSize).Return(int64(0), dbError)
 
 	// Error log
@@ -350,7 +350,7 @@ func TestCleanupExpiredSessionsUseCase_Execute_Timeout(t *testing.T) {
 	cancelFunc := func() {}
 	timeProvider.EXPECT().WithTimeout(mock.Anything, defaultTimeout).Return(timeoutCtx, cancelFunc)
 
-	// Return a context timeout error
+	// Return a context timeout errors
 	ctxErr := context.DeadlineExceeded
 	authSessionRepo.EXPECT().BatchDeleteExpired(timeoutCtx, now, batchSize).Return(int64(0), ctxErr)
 
@@ -367,7 +367,7 @@ func TestCleanupExpiredSessionsUseCase_Execute_Timeout(t *testing.T) {
 	// Act
 	err := useCase.Execute(context.Background(), input)
 
-	// The implementation DOESN'T handle the error gracefully and returns it
+	// The implementation DOESN'T handle the errors gracefully and returns it
 	assert.Error(t, err)
 	assert.Equal(t, ctxErr, err)
 }
@@ -397,10 +397,10 @@ func TestCleanupExpiredSessionsUseCase_Execute_PartialSuccess(t *testing.T) {
 	dbError := errors.New("connection reset")
 	authSessionRepo.EXPECT().BatchDeleteExpired(mock.Anything, mock.Anything, mock.Anything).Return(int64(batchSize), nil).Times(1)
 
-	// Second batch fails with database error - the important part
+	// Second batch fails with database errors - the important part
 	authSessionRepo.EXPECT().BatchDeleteExpired(mock.Anything, mock.Anything, mock.Anything).Return(int64(0), dbError).Times(1)
 
-	// Error log for the database error
+	// Error log for the database errors
 	logger.EXPECT().Error("Failed to delete expired sessions", mock.Anything).Return()
 
 	// Create use case
@@ -413,7 +413,7 @@ func TestCleanupExpiredSessionsUseCase_Execute_PartialSuccess(t *testing.T) {
 	// Act
 	err := useCase.Execute(context.Background(), input)
 
-	// Assert - error is returned from the database operation
+	// Assert - errors is returned from the database operation
 	assert.Error(t, err)
 	assert.Equal(t, dbError, err)
 }

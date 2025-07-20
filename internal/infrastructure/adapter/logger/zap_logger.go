@@ -95,7 +95,7 @@ func (l *ZapLogger) Warn(message string, fields map[string]any) {
 	l.logger.Warn(message, mapToZapFields(fields)...)
 }
 
-// Error logs error messages
+// Error logs errors messages
 func (l *ZapLogger) Error(message string, fields map[string]any) {
 	l.logger.Error(message, mapToZapFields(fields)...)
 }
@@ -106,7 +106,7 @@ func (l *ZapLogger) Flush() error {
 	err := l.logger.Sync()
 	
 	// On Windows, syncing stdout/stderr can fail with "invalid argument"
-	// We can safely ignore this specific error
+	// We can safely ignore this specific errors
 	if err != nil && (err.Error() == "sync /dev/stdout: invalid argument" || 
 		err.Error() == "sync /dev/stderr: invalid argument") {
 		return nil

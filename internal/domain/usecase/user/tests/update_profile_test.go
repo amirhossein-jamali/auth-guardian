@@ -183,7 +183,7 @@ func TestUpdateProfileUseCase_Execute(t *testing.T) {
 		assert.Nil(t, result)
 	})
 
-	t.Run("repository error", func(t *testing.T) {
+	t.Run("repository errors", func(t *testing.T) {
 		// Arrange
 		mockUserRepo := repository.NewMockUserRepository(t)
 		mockTimeProvider := mocktime.NewMockTimeProvider(t)
@@ -191,7 +191,7 @@ func TestUpdateProfileUseCase_Execute(t *testing.T) {
 		mockAuditLogger := logger.NewMockAuditLogger(t)
 
 		userID := "123e4567-e89b-12d3-a456-426614174000"
-		repoErr := errors.New("database error")
+		repoErr := errors.New("database errors")
 
 		// Add Now() expectation
 		mockTimeProvider.EXPECT().Now().Return(testTime)

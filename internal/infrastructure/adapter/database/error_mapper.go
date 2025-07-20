@@ -9,7 +9,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// EntityType represents the type of entity for error mapping
+// EntityType represents the type of entity for errors mapping
 type EntityType string
 
 const (
@@ -31,7 +31,15 @@ func MapError(err error) error {
 	case errors.Is(err, gorm.ErrRecordNotFound):
 		return domainError.ErrNotFound
 	case strings.Contains(errMsg, "unique") || strings.Contains(errMsg, "duplicate"):
-		return domainError.ErrEmailAlreadyExists
+		// Try to determine which constraint was violated
+		if strings.Contains(errMsg, "email") {
+			return domainError.ErrEmailAlreadyExists
+		} else if strings.Contains(errMsg, "phone") || strings.Contains(errMsg, "phone_number") {
+			return domainError.NewValidationError("phoneNumber", "phone number already exists")
+		} else {
+			// Default uniqueness error if we can't determine the exact field
+			return domainError.NewValidationError("field", "value already exists")
+		}
 	case strings.Contains(errMsg, "foreign key"):
 		return domainError.ErrInternalServer
 	case strings.Contains(errMsg, "timeout") || strings.Contains(errMsg, "deadline exceeded"):
@@ -61,12 +69,12 @@ func MapEntityNotFoundError(err error, entityType EntityType) error {
 	return MapError(err)
 }
 
-// MapUserNotFoundError maps database errors to user not found error
+// MapUserNotFoundError maps database errors to user not found errors
 func MapUserNotFoundError(err error) error {
 	return MapEntityNotFoundError(err, EntityTypeUser)
 }
 
-// MapSessionNotFoundError maps database errors to session not found error
+// MapSessionNotFoundError maps database errors to session not found errors
 func MapSessionNotFoundError(err error) error {
 	return MapEntityNotFoundError(err, EntityTypeSession)
 }

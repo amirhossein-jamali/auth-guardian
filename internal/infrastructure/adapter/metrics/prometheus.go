@@ -7,7 +7,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
-// PrometheusRecorder implements the MetricsRecorder port using Prometheus
+// PrometheusRecorder implements the MetricsRecorder ports using Prometheus
 type PrometheusRecorder struct {
 	namespace  string
 	counters   map[string]*prometheus.CounterVec

@@ -21,7 +21,7 @@ type Argon2Params struct {
 	KeyLength   uint32
 }
 
-// Argon2Hasher implements the PasswordHasher port using Argon2id algorithm
+// Argon2Hasher implements the PasswordHasher ports using Argon2id algorithm
 type Argon2Hasher struct {
 	params Argon2Params
 }

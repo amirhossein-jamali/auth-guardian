@@ -16,12 +16,15 @@ import (
 
 // RegisterInput represents data needed for user registration
 type RegisterInput struct {
-	Email     string
-	Password  string
-	FirstName string
-	LastName  string
-	UserAgent string
-	IP        string
+	Email       string // Now optional
+	Password    string
+	FirstName   string
+	LastName    string
+	UserAgent   string
+	IP          string
+	PhoneNumber string // Required field
+	OTPCode     string // Required OTP verification code
+	SkipOTPValidation bool // If true, skip OTP validation (used when OTP is already verified)
 }
 
 // RegisterOutput represents the result of a successful registration
@@ -35,12 +38,14 @@ type RegisterOutput struct {
 // RegisterUseCase handles user registration
 type RegisterUseCase struct {
 	userRepo       repository.UserRepository
+	otpRepo        repository.OTPRepository
 	sessionCreator SessionCreator
 	passwordHasher password.Hasher
 	tokenService   token.TokenService
 	idGenerator    idgenerator.IDGenerator
 	timeProvider   tport.Provider
 	logger         logger.Logger
+	maxOTPAttempts int
 }
 
 // SessionCreator defines the interface for creating authentication sessions
@@ -51,21 +56,25 @@ type SessionCreator interface {
 // NewRegisterUseCase creates a new instance of RegisterUseCase
 func NewRegisterUseCase(
 	userRepo repository.UserRepository,
+	otpRepo repository.OTPRepository,
 	sessionCreator SessionCreator,
 	passwordHasher password.Hasher,
 	tokenService token.TokenService,
 	idGenerator idgenerator.IDGenerator,
 	timeProvider tport.Provider,
 	logger logger.Logger,
+	maxOTPAttempts int,
 ) *RegisterUseCase {
 	return &RegisterUseCase{
 		userRepo:       userRepo,
+		otpRepo:        otpRepo,
 		sessionCreator: sessionCreator,
 		passwordHasher: passwordHasher,
 		tokenService:   tokenService,
 		idGenerator:    idGenerator,
 		timeProvider:   timeProvider,
 		logger:         logger,
+		maxOTPAttempts: maxOTPAttempts,
 	}
 }
 
@@ -74,26 +83,111 @@ func (uc *RegisterUseCase) Execute(ctx context.Context, input RegisterInput) (*R
 	// Start measuring execution time
 	startTime := uc.timeProvider.Now()
 
-	// Validate email
-	if err := validator.ValidateEmail(input.Email); err != nil {
+	// Validate phone number (required field)
+	if err := validator.ValidatePhoneNumber(input.PhoneNumber); err != nil {
 		return nil, err
 	}
 
-	// Normalize email before checking if it exists
-	normalizedEmail := validator.NormalizeEmail(input.Email)
-
-	// Check if email already exists
-	emailExists, err := uc.userRepo.EmailExists(ctx, normalizedEmail)
+	// Check if phone number already exists
+	phoneExists, err := uc.userRepo.PhoneNumberExists(ctx, input.PhoneNumber)
 	if err != nil {
-		uc.logger.Error("Failed to check email existence", map[string]any{
-			"email": normalizedEmail,
-			"error": err.Error(),
+		uc.logger.Error("Failed to check phone number existence", map[string]any{
+			"phoneNumber": input.PhoneNumber,
+			"error":       err.Error(),
 		})
 		return nil, err
 	}
 
-	if emailExists {
-		return nil, domainErr.ErrEmailAlreadyExists
+	if phoneExists {
+		return nil, domainErr.NewValidationError("phoneNumber", "phone number already exists")
+	}
+
+	// Verify OTP code first
+	if !input.SkipOTPValidation {
+		otp, err := uc.otpRepo.GetByPhoneNumber(ctx, input.PhoneNumber)
+		if err != nil {
+			uc.logger.Error("Failed to get OTP record", map[string]any{
+				"phoneNumber": input.PhoneNumber,
+				"error":       err.Error(),
+			})
+			return nil, domainErr.ErrInvalidOTP
+		}
+
+		// Validate the OTP
+		if !otp.Validate(input.OTPCode, uc.maxOTPAttempts, uc.timeProvider) {
+			// Increment attempt count
+			otp.IncrementAttempt()
+			if err := uc.otpRepo.Update(ctx, otp); err != nil {
+				uc.logger.Error("Failed to update OTP attempts", map[string]any{
+					"phoneNumber": input.PhoneNumber,
+					"error":       err.Error(),
+				})
+			}
+
+			if otp.IsExpired(uc.timeProvider) {
+				return nil, domainErr.ErrExpiredOTP
+			}
+
+			if otp.IsUsed {
+				return nil, domainErr.ErrUsedOTP
+			}
+
+			if otp.HasExceededMaxAttempts(uc.maxOTPAttempts) {
+				return nil, domainErr.ErrMaxAttemptsExceeded
+			}
+
+			// Code doesn't match
+			return nil, domainErr.ErrInvalidOTP
+		}
+
+		// Mark OTP as used
+		otp.MarkAsUsed(uc.timeProvider)
+		if err := uc.otpRepo.Update(ctx, otp); err != nil {
+			uc.logger.Error("Failed to mark OTP as used", map[string]any{
+				"phoneNumber": input.PhoneNumber,
+				"error":       err.Error(),
+			})
+			// Continue anyway as this is not critical
+		}
+	} else {
+		uc.logger.Debug("Skipping OTP validation", map[string]any{
+			"phoneNumber": input.PhoneNumber,
+		})
+	}
+
+	// Validate email (now optional)
+	if input.Email != "" {
+		if err := validator.ValidateEmail(input.Email); err != nil {
+			uc.logger.Error("Email validation failed", map[string]any{
+				"email": input.Email,
+				"error": err.Error(),
+			})
+			return nil, err
+		}
+
+		// Normalize email before checking if it exists
+		normalizedEmail := validator.NormalizeEmail(input.Email)
+		uc.logger.Debug("Checking if email exists", map[string]any{
+			"original_email": input.Email,
+			"normalized_email": normalizedEmail,
+		})
+
+		// Check if email already exists
+		emailExists, err := uc.userRepo.EmailExists(ctx, normalizedEmail)
+		if err != nil {
+			uc.logger.Error("Failed to check email existence", map[string]any{
+				"email": normalizedEmail,
+				"error": err.Error(),
+			})
+			return nil, err
+		}
+
+		if emailExists {
+			uc.logger.Info("Email already exists", map[string]any{
+				"email": normalizedEmail,
+			})
+			return nil, domainErr.ErrEmailAlreadyExists
+		}
 	}
 
 	// Validate password
@@ -119,11 +213,13 @@ func (uc *RegisterUseCase) Execute(ctx context.Context, input RegisterInput) (*R
 		return nil, domainErr.ErrInternalServer
 	}
 
-	// Create user with generated ID and normalized email
+	// Create user with generated ID
 	userId := entity.ID(uc.idGenerator.GenerateID())
+	normalizedEmail := validator.NormalizeEmail(input.Email)
 	user := entity.NewUser(
 		userId,
 		normalizedEmail,
+		input.PhoneNumber,
 		input.FirstName,
 		input.LastName,
 		uc.timeProvider,
@@ -159,7 +255,7 @@ func (uc *RegisterUseCase) Execute(ctx context.Context, input RegisterInput) (*R
 		return nil, domainErr.ErrTokenGenerationFailed
 	}
 
-	// Create auth session and log error if it fails, but continue process
+	// Create auth session and log errors if it fails, but continue process
 	// Token authentication can work without session record
 	if err := uc.sessionCreator.CreateSession(
 		ctx,
@@ -177,11 +273,17 @@ func (uc *RegisterUseCase) Execute(ctx context.Context, input RegisterInput) (*R
 
 	// Log successful registration with execution time
 	elapsed := uc.timeProvider.Now().Sub(startTime)
-	uc.logger.Info("User registered successfully", map[string]any{
-		"userId":  user.ID.String(),
-		"email":   normalizedEmail,
-		"elapsed": elapsed.String(),
-	})
+	logData := map[string]any{
+		"userId":      user.ID.String(),
+		"phoneNumber": input.PhoneNumber,
+		"elapsed":     elapsed.String(),
+	}
+
+	if input.Email != "" {
+		logData["email"] = normalizedEmail
+	}
+
+	uc.logger.Info("User registered successfully", logData)
 
 	return &RegisterOutput{
 		User:         user,

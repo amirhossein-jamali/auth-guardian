@@ -55,3 +55,20 @@ auth:
   refreshTokenTTL: 24       # hours
   maxSessionsPerUser: 5     # Maximum concurrent sessions per user
   sessionInactivityTTL: 30  # days
+
+# OTP Configuration
+otp:
+  length: 6                 # Length of the OTP code
+  expirySeconds: 180        # OTP validity period in seconds (3 minutes)
+  maxAttempts: 3            # Maximum number of failed verification attempts
+  cooldownSeconds: 60       # Minimum time between OTP requests in seconds (1 minute)
+  smsProvider: "twilio"     # Use Twilio in production
+  smsApiKey: ""             # Set via AUTH_GUARDIAN_SMS_API_KEY
+  enableMock: false         # Disable mock mode in production
+
+# Twilio Configuration (will be set via environment variables in production)
+twilio:
+  base_url: ""            # Set via TWILIO_BASE_URL
+  account_sid: ""         # Set via TWILIO_ACCOUNT_SID
+  auth_token: ""          # Set via TWILIO_AUTH_TOKEN
+  from_number: ""         # Set via TWILIO_FROM_NUMBER

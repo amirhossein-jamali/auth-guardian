@@ -6,7 +6,7 @@ import (
 	"github.com/amirhossein-jamali/auth-guardian/internal/domain/port/metrics"
 )
 
-// MemoryRecorder is a simple in-memory implementation of the MetricsRecorder port
+// MemoryRecorder is a simple in-memory implementation of the MetricsRecorder ports
 // primarily used for testing or environments where external metrics systems are not available
 type MemoryRecorder struct {
 	counters   map[string]map[string]float64

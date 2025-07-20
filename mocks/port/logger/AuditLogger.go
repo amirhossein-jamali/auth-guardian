@@ -5,6 +5,7 @@ package logger
 import (
 	context "context"
 
+	logger "github.com/amirhossein-jamali/auth-guardian/internal/domain/port/logger"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -62,6 +63,53 @@ func (_c *MockAuditLogger_Flush_Call) Return(_a0 error) *MockAuditLogger_Flush_C
 }
 
 func (_c *MockAuditLogger_Flush_Call) RunAndReturn(run func() error) *MockAuditLogger_Flush_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Log provides a mock function with given fields: ctx, event
+func (_m *MockAuditLogger) Log(ctx context.Context, event logger.AuditEvent) error {
+	ret := _m.Called(ctx, event)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Log")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, logger.AuditEvent) error); ok {
+		r0 = rf(ctx, event)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockAuditLogger_Log_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Log'
+type MockAuditLogger_Log_Call struct {
+	*mock.Call
+}
+
+// Log is a helper method to define mock.On call
+//   - ctx context.Context
+//   - event logger.AuditEvent
+func (_e *MockAuditLogger_Expecter) Log(ctx interface{}, event interface{}) *MockAuditLogger_Log_Call {
+	return &MockAuditLogger_Log_Call{Call: _e.mock.On("Log", ctx, event)}
+}
+
+func (_c *MockAuditLogger_Log_Call) Run(run func(ctx context.Context, event logger.AuditEvent)) *MockAuditLogger_Log_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(logger.AuditEvent))
+	})
+	return _c
+}
+
+func (_c *MockAuditLogger_Log_Call) Return(_a0 error) *MockAuditLogger_Log_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockAuditLogger_Log_Call) RunAndReturn(run func(context.Context, logger.AuditEvent) error) *MockAuditLogger_Log_Call {
 	_c.Call.Return(run)
 	return _c
 }

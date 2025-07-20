@@ -6,12 +6,15 @@ import (
 	"time"
 
 	"github.com/amirhossein-jamali/auth-guardian/internal/domain/port/logger"
+	otpPort "github.com/amirhossein-jamali/auth-guardian/internal/domain/port/otp"
+	"github.com/amirhossein-jamali/auth-guardian/internal/domain/port/repository"
 	tport "github.com/amirhossein-jamali/auth-guardian/internal/domain/port/time"
 	"github.com/amirhossein-jamali/auth-guardian/internal/domain/port/token"
 	"github.com/amirhossein-jamali/auth-guardian/internal/domain/usecase"
 	"github.com/amirhossein-jamali/auth-guardian/internal/infrastructure/adapter/crypto"
 	"github.com/amirhossein-jamali/auth-guardian/internal/infrastructure/adapter/idgenerator"
 	metricsAdapter "github.com/amirhossein-jamali/auth-guardian/internal/infrastructure/adapter/metrics"
+	otpAdapter "github.com/amirhossein-jamali/auth-guardian/internal/infrastructure/adapter/otp"
 	redisAdapter "github.com/amirhossein-jamali/auth-guardian/internal/infrastructure/adapter/redis"
 	repoAdapter "github.com/amirhossein-jamali/auth-guardian/internal/infrastructure/adapter/repository"
 	riskAdapter "github.com/amirhossein-jamali/auth-guardian/internal/infrastructure/adapter/risk"
@@ -26,6 +29,8 @@ import (
 type ServiceContainer struct {
 	UseCaseFactory *usecase.Factory
 	TokenService   token.TokenService
+	OTPRepository  repository.OTPRepository
+	TimeProvider   tport.Provider
 }
 
 // SetupServices initializes and configures all application services
@@ -43,6 +48,9 @@ func SetupServices(cfg *config.Config, db *gorm.DB, appLogger logger.Logger, aud
 
 	authSessionRepo := repoAdapter.NewGormAuthSessionRepository(db, appLogger, timeProvider)
 	appLogger.Info("Debug: Auth session repository initialized", nil)
+
+	otpRepo := repoAdapter.NewGormOTPRepository(db, appLogger, timeProvider)
+	appLogger.Info("Debug: OTP repository initialized", nil)
 
 	// Initialize core services
 	idGen := idgenerator.NewUUIDGenerator()
@@ -78,6 +86,8 @@ func SetupServices(cfg *config.Config, db *gorm.DB, appLogger logger.Logger, aud
 
 	// Initialize token store based on configuration
 	var tokenStore token.TokenStore
+	var rateLimiter redisAdapter.RateLimiter
+
 	// Check if Redis is configured and available
 	if cfg.Redis.Host != "" {
 		// Create Redis configuration
@@ -88,29 +98,36 @@ func SetupServices(cfg *config.Config, db *gorm.DB, appLogger logger.Logger, aud
 			Password: cfg.Redis.Password,
 			DB:       cfg.Redis.DB,
 		}
-		
+
 		// Initialize Redis manager to get key-value store
 		redisManager := redisAdapter.NewRedisManager(redisConfig, appLogger)
 		ctx := context.Background()
-		
+
 		if err := redisManager.Initialize(ctx); err != nil {
-			appLogger.Warn("Failed to connect to Redis for token store, falling back to in-memory store", map[string]any{"error": err.Error()})
+			appLogger.Warn("Failed to connect to Redis for token store, falling back to in-memory store", map[string]any{"errors": err.Error()})
 			tokenStore = tokenAdapter.NewInMemoryTokenStore()
+			rateLimiter = redisAdapter.NewInMemoryRateLimiter()
 		} else {
-			// Use Redis-based token store
+			// Use Redis-based token store and rate limiter
 			keyValueStore := redisManager.GetKeyValueStore()
 			tokenStore = tokenAdapter.NewRedisTokenStore(keyValueStore)
-			appLogger.Info("Using Redis-based token store", nil)
+			rateLimiter = redisManager.GetRateLimiter()
+			appLogger.Info("Using Redis-based token store and rate limiter", nil)
 		}
 	} else {
 		// Using an in-memory token store if Redis is not configured
 		tokenStore = tokenAdapter.NewInMemoryTokenStore()
-		appLogger.Info("Redis not configured, using in-memory token store", nil)
+		rateLimiter = redisAdapter.NewInMemoryRateLimiter()
+		appLogger.Info("Redis not configured, using in-memory token store and rate limiter", nil)
 	}
-	appLogger.Info("Debug: Token store initialized", nil)
+	appLogger.Info("Debug: Token store and rate limiter initialized", nil)
 
 	tokenSvc := tokenAdapter.NewJWTTokenService(jwtConfig, timeProvider, tokenStore, appLogger)
 	appLogger.Info("Debug: JWT token service initialized", nil)
+
+	// Initialize OTP service
+	var otpService otpPort.OTPService = otpAdapter.NewSMSOTPService(cfg.OTP.SMSProvider)
+	appLogger.Info("Debug: OTP service initialized", nil)
 
 	// Create factory options
 	var factoryOptions []usecase.FactoryOption
@@ -159,24 +176,52 @@ func SetupServices(cfg *config.Config, db *gorm.DB, appLogger logger.Logger, aud
 		"maxSessionsPerUser": maxSessionsPerUser,
 	})
 
+	// Set OTP configuration
+	otpLength := cfg.OTP.Length
+	if otpLength <= 0 {
+		otpLength = 6 // Default OTP length
+	}
+
+	otpExpirySeconds := cfg.OTP.ExpirySeconds
+	if otpExpirySeconds <= 0 {
+		otpExpirySeconds = 300 // Default expiry 5 minutes
+	}
+
+	otpCooldownSec := cfg.OTP.CooldownSeconds
+	if otpCooldownSec <= 0 {
+		otpCooldownSec = 60 // Default cooldown 1 minute
+	}
+
+	maxOTPAttempts := cfg.OTP.MaxAttempts
+	if maxOTPAttempts <= 0 {
+		maxOTPAttempts = 3 // Default max attempts
+	}
+
 	// Wrap factory creation in a recover to catch panics
 	var useCaseFactory *usecase.Factory
 	func() {
 		defer func() {
 			if r := recover(); r != nil {
-				appLogger.Error("PANIC in factory creation", map[string]any{"error": r})
+				appLogger.Error("PANIC in factory creation", map[string]any{"errors": r})
 			}
 		}()
 
 		useCaseFactory = usecase.NewFactory(
 			userRepo,
 			authSessionRepo,
+			otpRepo,
 			tokenSvc,
 			passwordHasher,
 			idGen,
 			timeProvider,
 			appLogger,
 			maxSessionsPerUser,
+			otpService,
+			rateLimiter,
+			otpLength,
+			otpExpirySeconds,
+			otpCooldownSec,
+			maxOTPAttempts,
 			factoryOptions...,
 		)
 	}()
@@ -192,5 +237,7 @@ func SetupServices(cfg *config.Config, db *gorm.DB, appLogger logger.Logger, aud
 	return &ServiceContainer{
 		UseCaseFactory: useCaseFactory,
 		TokenService:   tokenSvc,
+		OTPRepository:  otpRepo,
+		TimeProvider:   timeProvider,
 	}
 }

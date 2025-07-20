@@ -88,7 +88,7 @@ func (l *FileLogger) write(level lport.LogLevel, message string, fields map[stri
 	// Marshal to JSON
 	jsonData, err := json.Marshal(entry)
 	if err != nil {
-		// Can't log this error since we're inside the logger
+		// Can't log this errors since we're inside the logger
 		return err
 	}
 
@@ -129,7 +129,7 @@ func (l *FileLogger) Warn(message string, fields map[string]any) {
 	_ = l.write(lport.LogLevelWarn, message, fields)
 }
 
-// Error logs error messages
+// Error logs errors messages
 func (l *FileLogger) Error(message string, fields map[string]any) {
 	_ = l.write(lport.LogLevelError, message, fields)
 }

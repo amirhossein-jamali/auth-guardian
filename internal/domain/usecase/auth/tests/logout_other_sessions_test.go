@@ -211,7 +211,7 @@ func TestLogoutOtherSessionsUseCase_Execute_GetSessionDatabaseError(t *testing.T
 	startTime := time.Now()
 	timeProvider.EXPECT().Now().Return(startTime)
 
-	dbError := errors.New("database error")
+	dbError := errors.New("database errors")
 	authSessionRepo.EXPECT().GetByRefreshToken(mock.Anything, "valid-token").Return(nil, dbError)
 	logger.EXPECT().Error(mock.Anything, mock.Anything).Return()
 
@@ -292,7 +292,7 @@ func TestLogoutOtherSessionsUseCase_Execute_AuditLoggerError(t *testing.T) {
 	authSessionRepo.EXPECT().GetByRefreshToken(mock.Anything, session.RefreshToken).Return(session, nil)
 	authSessionRepo.EXPECT().DeleteAllExcept(mock.Anything, session.UserID, session.ID).Return(sessionsRemoved, nil)
 
-	// Audit logger error (should be ignored)
+	// Audit logger errors (should be ignored)
 	auditLogError := errors.New("audit log failed")
 	auditLogger.EXPECT().LogSecurityEvent(mock.Anything, mock.Anything, mock.Anything).Return(auditLogError)
 

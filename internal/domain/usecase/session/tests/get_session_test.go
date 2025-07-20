@@ -189,12 +189,12 @@ func TestGetSessionsUseCase_Execute_RepositoryError(t *testing.T) {
 
 	// Test data with valid UUID
 	userID := "123e4567-e89b-12d3-a456-426614174000"
-	repoError := errors.New("database error")
+	repoError := errors.New("database errors")
 
 	// Setup expectations
 	authSessionRepo.EXPECT().GetByUserID(mock.Anything, entity.NewID(userID)).Return(nil, repoError)
 	logger.EXPECT().Error("Failed to get sessions for user", mock.MatchedBy(func(data map[string]interface{}) bool {
-		return data["userId"] == userID && data["error"] == repoError.Error()
+		return data["userId"] == userID && data["errors"] == repoError.Error()
 	})).Return()
 
 	// Create use case

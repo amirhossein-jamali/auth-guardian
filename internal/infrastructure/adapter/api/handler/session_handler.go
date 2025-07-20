@@ -8,6 +8,7 @@ import (
 )
 
 // SessionResponse represents the response for session endpoints
+// swagger:model
 type SessionResponse struct {
 	SessionID    string `json:"session_id"`
 	UserAgent    string `json:"user_agent"`
@@ -18,6 +19,7 @@ type SessionResponse struct {
 }
 
 // SessionsListResponse represents the response for listing sessions
+// swagger:model
 type SessionsListResponse struct {
 	Sessions []SessionResponse `json:"sessions"`
 }
@@ -35,11 +37,21 @@ func NewSessionHandler(getSessionsUseCase *session.GetSessionsUseCase) *SessionH
 }
 
 // GetUserSessions gets all active sessions for the current user
+// @Summary Get user sessions
+// @Description Get all active sessions for the current user
+// @Tags sessions
+// @Accept json
+// @Produce json
+// @Success 200 {object} SessionsListResponse
+// @Failure 401 {object} errors.ErrorResponse
+// @Failure 500 {object} errors.ErrorResponse
+// @Router /sessions [get]
+// @Security ApiKeyAuth
 func (h *SessionHandler) GetUserSessions(c *gin.Context) {
 	// Get user ID from context
 	userID, exists := c.Get("user_id")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		c.JSON(http.StatusUnauthorized, gin.H{"errors": "Unauthorized"})
 		return
 	}
 
@@ -53,7 +65,7 @@ func (h *SessionHandler) GetUserSessions(c *gin.Context) {
 	})
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get sessions"})
+		c.JSON(http.StatusInternalServerError, gin.H{"errors": "Failed to get sessions"})
 		return
 	}
 

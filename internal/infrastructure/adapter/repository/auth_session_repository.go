@@ -76,7 +76,7 @@ func (r *GormAuthSessionRepository) ExecuteInTransaction(ctx context.Context, fn
 	// Begin a new transaction
 	tx := r.db.WithContext(ctx).Begin()
 	if tx.Error != nil {
-		r.logger.Error("Failed to begin transaction", map[string]any{"error": tx.Error.Error()})
+		r.logger.Error("Failed to begin transaction", map[string]any{"errors": tx.Error.Error()})
 		return database.MapError(tx.Error)
 	}
 
@@ -91,15 +91,15 @@ func (r *GormAuthSessionRepository) ExecuteInTransaction(ctx context.Context, fn
 	// Execute the provided function with the transaction-bound repository
 	err := fn(txRepo)
 	if err != nil {
-		// If an error occurs, rollback the transaction
-		r.logger.Debug("Rolling back transaction due to error", map[string]any{"error": err.Error()})
+		// If an errors occurs, rollback the transaction
+		r.logger.Debug("Rolling back transaction due to errors", map[string]any{"errors": err.Error()})
 		tx.Rollback()
 		return err
 	}
 
 	// If everything succeeds, commit the transaction
 	if err := tx.Commit().Error; err != nil {
-		r.logger.Error("Failed to commit transaction", map[string]any{"error": err.Error()})
+		r.logger.Error("Failed to commit transaction", map[string]any{"errors": err.Error()})
 		return database.MapError(err)
 	}
 
@@ -119,7 +119,7 @@ func (r *GormAuthSessionRepository) Create(ctx context.Context, session *entity.
 		r.logger.Error("Failed to create session", map[string]any{
 			"sessionId": session.ID.String(),
 			"userId":    session.UserID.String(),
-			"error":     result.Error.Error(),
+			"errors":     result.Error.Error(),
 		})
 	}
 
@@ -141,7 +141,7 @@ func (r *GormAuthSessionRepository) GetByUserID(ctx context.Context, userID enti
 	if result.Error != nil {
 		r.logger.Error("Failed to get sessions by user ID", map[string]any{
 			"userId": userID.String(),
-			"error":  result.Error.Error(),
+			"errors":  result.Error.Error(),
 		})
 		return nil, database.MapError(result.Error)
 	}
@@ -152,7 +152,7 @@ func (r *GormAuthSessionRepository) GetByUserID(ctx context.Context, userID enti
 		if err != nil {
 			r.logger.Error("Failed to convert session model to entity", map[string]any{
 				"sessionId": dbSession.ID,
-				"error":     err.Error(),
+				"errors":     err.Error(),
 			})
 			return nil, err
 		}
@@ -180,7 +180,7 @@ func (r *GormAuthSessionRepository) GetByRefreshToken(ctx context.Context, refre
 		}
 		r.logger.Error("Failed to get session by refresh token", map[string]any{
 			"tokenHash": refreshToken[:8],
-			"error":     result.Error.Error(),
+			"errors":     result.Error.Error(),
 		})
 		return nil, database.MapError(result.Error)
 	}
@@ -211,7 +211,7 @@ func (r *GormAuthSessionRepository) GetByUserIDAndUserAgent(ctx context.Context,
 		r.logger.Error("Failed to get session by user ID and user agent", map[string]any{
 			"userId":    userID.String(),
 			"userAgent": userAgent,
-			"error":     result.Error.Error(),
+			"errors":     result.Error.Error(),
 		})
 		return nil, database.MapError(result.Error)
 	}
@@ -232,7 +232,7 @@ func (r *GormAuthSessionRepository) DeleteAllByUserID(ctx context.Context, userI
 	if result.Error != nil {
 		r.logger.Error("Failed to delete all sessions for user", map[string]any{
 			"userId": userID.String(),
-			"error":  result.Error.Error(),
+			"errors":  result.Error.Error(),
 		})
 	} else {
 		r.logger.Info("Deleted all sessions for user", map[string]any{
@@ -257,7 +257,7 @@ func (r *GormAuthSessionRepository) DeleteByID(ctx context.Context, id entity.ID
 	if result.Error != nil {
 		r.logger.Error("Failed to delete session", map[string]any{
 			"sessionId": id.String(),
-			"error":     result.Error.Error(),
+			"errors":     result.Error.Error(),
 		})
 		return database.MapError(result.Error)
 	}
@@ -283,7 +283,7 @@ func (r *GormAuthSessionRepository) DeleteExpired(ctx context.Context, before ti
 	if result.Error != nil {
 		r.logger.Error("Failed to delete expired sessions", map[string]any{
 			"beforeTime": before.Unix(),
-			"error":      result.Error.Error(),
+			"errors":      result.Error.Error(),
 		})
 	} else {
 		r.logger.Info("Deleted expired sessions", map[string]any{
@@ -316,7 +316,7 @@ func (r *GormAuthSessionRepository) Update(ctx context.Context, session *entity.
 	if result.Error != nil {
 		r.logger.Error("Failed to update session", map[string]any{
 			"sessionId": session.ID.String(),
-			"error":     result.Error.Error(),
+			"errors":     result.Error.Error(),
 		})
 		return database.MapError(result.Error)
 	}
@@ -344,7 +344,7 @@ func (r *GormAuthSessionRepository) CountByUserID(ctx context.Context, userID en
 	if result.Error != nil {
 		r.logger.Error("Failed to count sessions for user", map[string]any{
 			"userId": userID.String(),
-			"error":  result.Error.Error(),
+			"errors":  result.Error.Error(),
 		})
 		return 0, database.MapError(result.Error)
 	}
@@ -384,7 +384,7 @@ func (r *GormAuthSessionRepository) DeleteOldestByUserID(ctx context.Context, us
 			}
 			r.logger.Error("Failed to find oldest session", map[string]any{
 				"userId": userID.String(),
-				"error":  findResult.Error.Error(),
+				"errors":  findResult.Error.Error(),
 			})
 			return database.MapError(findResult.Error)
 		}
@@ -398,7 +398,7 @@ func (r *GormAuthSessionRepository) DeleteOldestByUserID(ctx context.Context, us
 			r.logger.Error("Failed to delete oldest session", map[string]any{
 				"userId":    userID.String(),
 				"sessionId": oldestSession.ID,
-				"error":     deleteResult.Error.Error(),
+				"errors":     deleteResult.Error.Error(),
 			})
 		} else {
 			r.logger.Info("Deleted oldest session", map[string]any{
@@ -439,7 +439,7 @@ func (r *GormAuthSessionRepository) EnsureSessionLimit(ctx context.Context, user
 		if countResult.Error != nil {
 			r.logger.Error("Failed to count sessions", map[string]any{
 				"userId": userID.String(),
-				"error":  countResult.Error.Error(),
+				"errors":  countResult.Error.Error(),
 			})
 			return database.MapError(countResult.Error)
 		}
@@ -463,7 +463,7 @@ func (r *GormAuthSessionRepository) EnsureSessionLimit(ctx context.Context, user
 			r.logger.Error("Failed to find oldest sessions", map[string]any{
 				"userId": userID.String(),
 				"limit":  toDelete,
-				"error":  findResult.Error.Error(),
+				"errors":  findResult.Error.Error(),
 			})
 			return database.MapError(findResult.Error)
 		}
@@ -487,7 +487,7 @@ func (r *GormAuthSessionRepository) EnsureSessionLimit(ctx context.Context, user
 			r.logger.Error("Failed to delete oldest sessions", map[string]any{
 				"userId":       userID.String(),
 				"sessionCount": len(ids),
-				"error":        deleteResult.Error.Error(),
+				"errors":        deleteResult.Error.Error(),
 			})
 		} else {
 			r.logger.Info("Deleted oldest sessions to enforce limit", map[string]any{
@@ -528,7 +528,7 @@ func (r *GormAuthSessionRepository) BatchDeleteExpired(ctx context.Context, befo
 			r.logger.Error("Failed to find expired sessions", map[string]any{
 				"beforeTime": beforeTimeUnix,
 				"batchSize":  batchSize,
-				"error":      findResult.Error.Error(),
+				"errors":      findResult.Error.Error(),
 			})
 			return totalDeleted, database.MapError(findResult.Error)
 		}
@@ -552,7 +552,7 @@ func (r *GormAuthSessionRepository) BatchDeleteExpired(ctx context.Context, befo
 		if deleteResult.Error != nil {
 			r.logger.Error("Failed to delete batch of expired sessions", map[string]any{
 				"batchSize": len(ids),
-				"error":     deleteResult.Error.Error(),
+				"errors":     deleteResult.Error.Error(),
 			})
 			return totalDeleted, database.MapError(deleteResult.Error)
 		}
@@ -592,7 +592,7 @@ func (r *GormAuthSessionRepository) DeleteAllExcept(ctx context.Context, userID 
 		r.logger.Error("Failed to delete all sessions except current", map[string]any{
 			"userId":    userID.String(),
 			"sessionId": sessionID.String(),
-			"error":     result.Error.Error(),
+			"errors":     result.Error.Error(),
 		})
 		return 0, database.MapError(result.Error)
 	}

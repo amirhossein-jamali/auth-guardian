@@ -43,6 +43,7 @@ func (r *GormUserRepository) toModel(user *entity.User) *model.User {
 		IsActive:     user.IsActive,
 		CreatedAt:    user.CreatedAt,
 		UpdatedAt:    user.UpdatedAt,
+		PhoneNumber:  user.PhoneNumber,
 	}
 }
 
@@ -57,6 +58,7 @@ func (r *GormUserRepository) toEntity(dbUser model.User) (*entity.User, error) {
 		IsActive:     dbUser.IsActive,
 		CreatedAt:    dbUser.CreatedAt,
 		UpdatedAt:    dbUser.UpdatedAt,
+		PhoneNumber:  dbUser.PhoneNumber,
 	}
 	return user, nil
 }
@@ -98,7 +100,7 @@ func (r *GormUserRepository) Create(ctx context.Context, user *entity.User) erro
 	if result.Error != nil {
 		r.logger.Error("Failed to create user", map[string]any{
 			"userId": user.ID.String(),
-			"error":  result.Error.Error(),
+			"errors":  result.Error.Error(),
 		})
 	}
 
@@ -122,7 +124,7 @@ func (r *GormUserRepository) GetByID(ctx context.Context, id entity.ID) (*entity
 		} else {
 			r.logger.Error("Failed to get user by ID", map[string]any{
 				"userId": id.String(),
-				"error":  result.Error.Error(),
+				"errors":  result.Error.Error(),
 			})
 		}
 		return nil, database.MapEntityNotFoundError(result.Error, database.EntityTypeUser)
@@ -148,7 +150,7 @@ func (r *GormUserRepository) GetByEmail(ctx context.Context, email string) (*ent
 		} else {
 			r.logger.Error("Failed to get user by email", map[string]any{
 				"email": email,
-				"error": result.Error.Error(),
+				"errors": result.Error.Error(),
 			})
 		}
 		return nil, database.MapEntityNotFoundError(result.Error, database.EntityTypeUser)
@@ -179,7 +181,7 @@ func (r *GormUserRepository) Update(ctx context.Context, user *entity.User) erro
 	if result.Error != nil {
 		r.logger.Error("Failed to update user", map[string]any{
 			"userId": user.ID.String(),
-			"error":  result.Error.Error(),
+			"errors":  result.Error.Error(),
 		})
 		return database.MapError(result.Error)
 	}
@@ -205,7 +207,7 @@ func (r *GormUserRepository) Delete(ctx context.Context, id entity.ID) error {
 	if result.Error != nil {
 		r.logger.Error("Failed to delete user", map[string]any{
 			"userId": id.String(),
-			"error":  result.Error.Error(),
+			"errors":  result.Error.Error(),
 		})
 		return database.MapError(result.Error)
 	}
@@ -233,10 +235,59 @@ func (r *GormUserRepository) EmailExists(ctx context.Context, email string) (boo
 	if result.Error != nil {
 		r.logger.Error("Failed to check email existence", map[string]any{
 			"email": email,
-			"error": result.Error.Error(),
+			"errors": result.Error.Error(),
 		})
 		return false, database.MapError(result.Error)
 	}
 
 	return count > 0, nil
+}
+
+// PhoneNumberExists checks if a phone number exists
+func (r *GormUserRepository) PhoneNumberExists(ctx context.Context, phoneNumber string) (bool, error) {
+	if err := r.contextUtil.CheckContext(ctx); err != nil {
+		return false, err
+	}
+
+	var count int64
+	result := r.db.WithContext(ctx).
+		Model(&model.User{}).
+		Where("phone_number = ?", phoneNumber).
+		Count(&count)
+
+	if result.Error != nil {
+		r.logger.Error("Failed to check phone number existence", map[string]any{
+			"phoneNumber": phoneNumber,
+			"errors": result.Error.Error(),
+		})
+		return false, database.MapError(result.Error)
+	}
+
+	return count > 0, nil
+}
+
+// GetByPhoneNumber gets a user by phone number
+func (r *GormUserRepository) GetByPhoneNumber(ctx context.Context, phoneNumber string) (*entity.User, error) {
+	if err := r.contextUtil.CheckContext(ctx); err != nil {
+		return nil, err
+	}
+
+	var dbUser model.User
+	result := r.db.WithContext(ctx).
+		Where("phone_number = ?", phoneNumber).
+		First(&dbUser)
+
+	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			r.logger.Debug("User not found by phone number", map[string]any{"phoneNumber": phoneNumber})
+		} else {
+			r.logger.Error("Failed to get user by phone number", map[string]any{
+				"phoneNumber": phoneNumber,
+				"errors": result.Error.Error(),
+			})
+		}
+		return nil, database.MapEntityNotFoundError(result.Error, database.EntityTypeUser)
+	}
+
+	return r.toEntity(dbUser)
 }

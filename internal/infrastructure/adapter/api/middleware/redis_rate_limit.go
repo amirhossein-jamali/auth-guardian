@@ -44,12 +44,12 @@ func (m *RedisRateLimiterMiddleware) LimitWithRedis() gin.HandlerFunc {
 		allowed, err := m.rateLimiter.Allow(c.Request.Context(), key, m.rate, m.window)
 
 		if err != nil {
-			m.logger.Error("Rate limiting error", map[string]any{
+			m.logger.Error("Rate limiting errors", map[string]any{
 				"ip":    key,
-				"error": err.Error(),
+				"errors": err.Error(),
 			})
 
-			// Allow the request to proceed if there's an error with rate limiting
+			// Allow the request to proceed if there's an errors with rate limiting
 			c.Next()
 			return
 		}
@@ -74,7 +74,7 @@ func (m *RedisRateLimiterMiddleware) LimitWithRedis() gin.HandlerFunc {
 			c.Header("Retry-After", strconv.Itoa(int(ttl.Seconds())))
 
 			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
-				"error": "Rate limit exceeded",
+				"errors": "Rate limit exceeded",
 				"wait":  ttl.String(),
 			})
 			return

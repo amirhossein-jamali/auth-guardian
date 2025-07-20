@@ -7,7 +7,7 @@ import (
 	tport "github.com/amirhossein-jamali/auth-guardian/internal/domain/port/time"
 )
 
-// RealTimeProvider implements the Provider port with actual time
+// RealTimeProvider implements the Provider ports with actual time
 type RealTimeProvider struct{}
 
 func NewRealTimeProvider() tport.Provider {

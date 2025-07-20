@@ -52,12 +52,14 @@ func setupRouter(authHandler *handler.AuthHandler) *gin.Engine {
 	{
 		authGroup := api.Group("/auth")
 		{
-			authGroup.POST("/register", authHandler.Register)
+			// authGroup.POST("/register", authHandler.Register) // Removed old registration endpoint
+			authGroup.POST("/register-with-otp", authHandler.RegisterWithOTP) // Combined endpoint
 			authGroup.POST("/login", authHandler.Login)
 			authGroup.POST("/refresh", authHandler.RefreshToken)
 			authGroup.POST("/logout", authHandler.Logout)
 			authGroup.POST("/logout-all", authHandler.LogoutAll)
 			authGroup.POST("/logout-others", authHandler.LogoutOtherSessions)
+			authGroup.POST("/request-otp", authHandler.RequestOTP) // Added request OTP endpoint
 		}
 	}
 
@@ -92,6 +94,9 @@ func setupTest(t *testing.T) (
 	riskEvaluator := mockRisk.NewMockRiskEvaluator(t)
 	auditLogger := mockLogger.NewMockAuditLogger(t)
 	sessionCreator := new(mockSessionCreator)
+
+	// Add mock for OTP repository
+	otpRepo := mockRepo.NewMockOTPRepository(t)
 
 	// Setup default behavior for logger to avoid unnecessary mocking
 	logger.EXPECT().Debug(mock.Anything, mock.Anything).Maybe().Return()
@@ -167,6 +172,28 @@ func setupTest(t *testing.T) (
 		logger,
 	)
 
+	// Create OTP use cases
+	requestOTPUseCase := auth.NewRequestOTPUseCase(
+		otpRepo,
+		idGenerator,
+		timeProvider,
+		logger,
+		60,  // expirySeconds
+		3,   // maxAttempts
+		60,  // cooldownSeconds
+		true, // enableMock
+	)
+
+	verifyOTPUseCase := auth.NewVerifyOTPUseCase(
+		otpRepo,
+		userRepo,
+		tokenService,
+		timeProvider,
+		sessionCreator,
+		logger,
+		5, // maxSessions
+	)
+
 	// Create Auth handler
 	authHandler := handler.NewAuthHandler(
 		registerUseCase,
@@ -175,6 +202,8 @@ func setupTest(t *testing.T) (
 		logoutAllUseCase,
 		logoutOtherUseCase,
 		refreshTokenUseCase,
+		requestOTPUseCase,
+		verifyOTPUseCase,
 	)
 
 	// Create router with auth handler
@@ -555,8 +584,8 @@ func TestRegister_ValidationError(t *testing.T) {
 	err = json.Unmarshal(resp.Body.Bytes(), &responseBody)
 	require.NoError(t, err)
 
-	// Verify error response
-	assert.Contains(t, responseBody, "error")
+	// Verify errors response
+	assert.Contains(t, responseBody, "errors")
 	assert.Contains(t, responseBody, "code")
 }
 
@@ -602,9 +631,81 @@ func TestLogin_InvalidCredentials(t *testing.T) {
 	err = json.Unmarshal(resp.Body.Bytes(), &responseBody)
 	require.NoError(t, err)
 
-	// Verify error response
-	assert.Contains(t, responseBody, "error")
+	// Verify errors response
+	assert.Contains(t, responseBody, "errors")
 	assert.Contains(t, responseBody, "code")
 	assert.Equal(t, "invalid_credentials", responseBody["code"])
-	assert.Equal(t, "Invalid email or password. Please check your credentials and try again.", responseBody["error"])
+	assert.Equal(t, "Invalid email or password. Please check your credentials and try again.", responseBody["errors"])
+}
+
+// TestRegisterWithOTP tests the combined OTP verification and registration endpoint
+func TestRegisterWithOTP(t *testing.T) {
+	router, _, userRepo, _, tokenService, passwordHasher, timeProvider, _, idGenerator, _, _, _, sessionCreator := setupTest(t)
+
+	// Mock behavior for OTP verification
+	userID := entity.NewID()
+	hashedPwd := "hashed_password"
+	accessToken := "access_token"
+	refreshToken := "refresh_token"
+	expiresAt := int64(1625097600) // Unix timestamp
+
+	// Mock ID generation
+	idGenerator.EXPECT().GenerateID().Return(userID, nil)
+
+	// Mock password hashing
+	passwordHasher.EXPECT().Hash("Password123").Return(hashedPwd, nil)
+
+	// Mock token generation
+	tokenService.EXPECT().GenerateTokenPair(mock.Anything, userID.String(), mock.Anything).
+		Return(accessToken, refreshToken, expiresAt, nil)
+
+	// Mock session creation
+	sessionCreator.On("CreateSession", 
+		mock.Anything, userID, refreshToken, "integration-test-agent", mock.Anything, expiresAt).
+		Return(nil)
+
+	// Mock user repository to simulate new user creation
+	userRepo.EXPECT().GetByPhoneNumber(mock.Anything, "+98917739488").
+		Return(nil, nil) // Phone number doesn't exist
+	userRepo.EXPECT().Create(mock.Anything, mock.Anything).
+		Run(func(_ context.Context, user *entity.User) {
+			assert.Equal(t, userID, user.ID)
+			assert.Equal(t, "sa@example.com", user.Email)
+			assert.Equal(t, hashedPwd, user.Password)
+			assert.Equal(t, "John", user.FirstName)
+			assert.Equal(t, "Doe", user.LastName)
+		}).Return(nil)
+
+	// Create request body
+	reqBody := dto.RegisterWithOTPRequest{
+		Email:       "sa@example.com",
+		Password:    "Password123",
+		FirstName:   "John",
+		LastName:    "Doe",
+		PhoneNumber: "+98917739488",
+		Code:        "123456",
+	}
+
+	// Perform request
+	w, err := performRequest(router, "POST", "/api/auth/register-with-otp", reqBody)
+	require.NoError(t, err)
+
+	// Check response
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	var response dto.RegisterResponse
+	err = json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+
+	assert.Equal(t, userID.String(), response.UserID)
+	assert.Equal(t, "sa@example.com", response.Email)
+	assert.Equal(t, "John", response.FirstName)
+	assert.Equal(t, "Doe", response.LastName)
+	assert.Equal(t, "+98917739488", response.PhoneNumber)
+	assert.Equal(t, accessToken, response.AccessToken)
+	assert.Equal(t, refreshToken, response.RefreshToken)
+	assert.Equal(t, expiresAt, response.ExpiresAt)
+
+	// Verify all expectations were met
+	mock.AssertExpectationsForObjects(t, sessionCreator)
 }

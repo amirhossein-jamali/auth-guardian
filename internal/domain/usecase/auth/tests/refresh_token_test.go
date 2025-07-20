@@ -216,8 +216,8 @@ func TestRefreshTokenUseCase_Execute_DatabaseError(t *testing.T) {
 		IP:           "192.168.1.1",
 	}
 
-	// Setup expectations - database error
-	dbError := errors.New("database error")
+	// Setup expectations - database errors
+	dbError := errors.New("database errors")
 	authSessionRepo.EXPECT().GetByRefreshToken(mock.Anything, "existing-token").Return(nil, dbError)
 	logger.EXPECT().Error(mock.Anything, mock.Anything).Return()
 
@@ -255,7 +255,7 @@ func TestRefreshTokenUseCase_Execute_TokenGenerationError(t *testing.T) {
 	authSessionRepo.EXPECT().GetByRefreshToken(mock.Anything, session.RefreshToken).Return(session, nil)
 	timeProvider.EXPECT().Now().Return(now)
 
-	// Token generation error
+	// Token generation errors
 	tokenGenError := errors.New("token generation failed")
 	tokenService.EXPECT().GenerateTokens(session.UserID.String()).Return("", "", int64(0), tokenGenError)
 	logger.EXPECT().Error(mock.Anything, mock.Anything).Return()
@@ -298,7 +298,7 @@ func TestRefreshTokenUseCase_Execute_SessionUpdateError(t *testing.T) {
 	timeProvider.EXPECT().Now().Return(now).Times(2) // Once for expiration check, once for update
 	tokenService.EXPECT().GenerateTokens(session.UserID.String()).Return(newAccessToken, newRefreshToken, expiresAt, nil)
 
-	// Session update error
+	// Session update errors
 	updateError := errors.New("session update failed")
 	authSessionRepo.EXPECT().Update(mock.Anything, mock.Anything).Return(updateError)
 	logger.EXPECT().Error(mock.Anything, mock.Anything).Return()

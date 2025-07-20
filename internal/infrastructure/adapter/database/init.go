@@ -17,7 +17,7 @@ func Initialize(config *viper.Viper, log logger.Logger, timeProvider tport.Provi
 	dbManager, err := NewDBManager(dbConfig, log, timeProvider)
 	if err != nil {
 		log.Error("Failed to create database manager", map[string]any{
-			"error": err.Error(),
+			"errors": err.Error(),
 		})
 		return nil, err
 	}

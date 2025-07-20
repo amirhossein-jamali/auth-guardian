@@ -263,10 +263,10 @@ func TestRegisterUseCase_Execute_UserRepoError(t *testing.T) {
 		IP:        "192.168.1.1",
 	}
 
-	// Setup expectations for repository error
+	// Setup expectations for repository errors
 	currentTime := time.Now()
 	timeProvider.EXPECT().Now().Return(currentTime)
-	userRepo.EXPECT().EmailExists(mock.Anything, "test@example.com").Return(false, errors.New("database error"))
+	userRepo.EXPECT().EmailExists(mock.Anything, "test@example.com").Return(false, errors.New("database errors"))
 	logger.EXPECT().Error(mock.Anything, mock.Anything).Return()
 
 	// Create use case
@@ -330,7 +330,7 @@ func TestRegisterUseCase_Execute_CreateSessionError(t *testing.T) {
 
 	tokenService.EXPECT().GenerateTokens(userID).Return(accessToken, refreshToken, expiresAt, nil)
 
-	// Session creator will return an error
+	// Session creator will return an errors
 	sessionCreator.On("CreateSession", mock.Anything, entity.ID(userID), refreshToken, "Mozilla/5.0", "192.168.1.1", expiresAt).
 		Return(errors.New("session creation failed"))
 
@@ -340,7 +340,7 @@ func TestRegisterUseCase_Execute_CreateSessionError(t *testing.T) {
 	// Additional time provider call for final metrics
 	timeProvider.EXPECT().Now().Return(currentTime.Add(100 * time.Millisecond))
 
-	// Success log should still be recorded even with session error
+	// Success log should still be recorded even with session errors
 	logger.EXPECT().Info(mock.Anything, mock.Anything).Return()
 
 	// Create use case
@@ -354,10 +354,10 @@ func TestRegisterUseCase_Execute_CreateSessionError(t *testing.T) {
 		logger,
 	)
 
-	// Act - should still succeed despite session error
+	// Act - should still succeed despite session errors
 	result, err := useCase.Execute(context.Background(), input)
 
-	// Assert - operation should succeed despite session creation error
+	// Assert - operation should succeed despite session creation errors
 	require.NoError(t, err)
 	require.NotNil(t, result)
 	assert.Equal(t, entity.ID(userID), result.User.ID)

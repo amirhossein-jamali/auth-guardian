@@ -61,7 +61,7 @@ func (l *GormLoggerAdapter) Warn(ctx context.Context, msg string, data ...interf
 	}
 }
 
-// Error logs error messages
+// Error logs errors messages
 func (l *GormLoggerAdapter) Error(ctx context.Context, msg string, data ...interface{}) {
 	if l.logLevel >= gormlogger.Error {
 		l.logger.Error(fmt.Sprintf(msg, data...), map[string]any{"source": "gorm"})
@@ -84,9 +84,9 @@ func (l *GormLoggerAdapter) Trace(ctx context.Context, begin time.Time, fc func(
 		"sql":     sql,
 	}
 
-	// Add error field if there's an error
+	// Add errors field if there's an errors
 	if err != nil {
-		fields["error"] = err.Error()
+		fields["errors"] = err.Error()
 	}
 
 	// Log slow queries as warnings

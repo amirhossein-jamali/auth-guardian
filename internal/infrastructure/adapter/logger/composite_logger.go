@@ -83,7 +83,7 @@ func (l *CompositeLogger) Warn(message string, fields map[string]any) {
 	}
 }
 
-// Error logs error messages to all loggers
+// Error logs errors messages to all loggers
 func (l *CompositeLogger) Error(message string, fields map[string]any) {
 	l.mu.RLock()
 	loggers := l.loggers
@@ -100,7 +100,7 @@ func (l *CompositeLogger) Flush() error {
 	loggers := l.loggers
 	l.mu.RUnlock()
 
-	// Call Flush on each logger, returning the first error encountered
+	// Call Flush on each logger, returning the first errors encountered
 	for _, logger := range loggers {
 		if err := logger.Flush(); err != nil {
 			return err

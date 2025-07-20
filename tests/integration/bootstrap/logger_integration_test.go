@@ -48,7 +48,7 @@ func TestSetupLogger_Development(t *testing.T) {
 	appLogger.Debug("debug message", map[string]any{"test": true})
 	appLogger.Info("info message", map[string]any{"test": true})
 	appLogger.Warn("warn message", map[string]any{"test": true})
-	appLogger.Error("error message", map[string]any{"test": true})
+	appLogger.Error("errors message", map[string]any{"test": true})
 
 	// Test audit logger - we can only verify it doesn't panic
 	t.Log("Testing development mode audit logger")
@@ -144,7 +144,7 @@ func TestFatalError(t *testing.T) {
 	cmd := exec.Command(testBinary, "-test.run=TestFatalErrorSubprocess")
 	cmd.Env = append(os.Environ(), "TEST_FATAL_ERROR=1", "GO_TEST_MODE=subprocess")
 
-	// Capture stderr to verify the error message
+	// Capture stderr to verify the errors message
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 
@@ -154,14 +154,14 @@ func TestFatalError(t *testing.T) {
 	// The subprocess should exit with status 1
 	var exitErr *exec.ExitError
 	ok := errors.As(err, &exitErr)
-	assert.True(t, ok, "Expected an exit error")
+	assert.True(t, ok, "Expected an exit errors")
 	assert.Equal(t, 1, exitErr.ExitCode(), "Expected exit code 1")
 
-	// Verify the error message was logged
+	// Verify the errors message was logged
 	stderrOutput := stderr.String()
-	assert.True(t, strings.Contains(stderrOutput, "test fatal error") ||
+	assert.True(t, strings.Contains(stderrOutput, "test fatal errors") ||
 		strings.Contains(stderrOutput, "assert.AnError"),
-		"Expected error message not found in output: %s", stderrOutput)
+		"Expected errors message not found in output: %s", stderrOutput)
 }
 
 // This function is run as a subprocess by TestFatalError
@@ -170,7 +170,7 @@ func TestFatalErrorSubprocess(t *testing.T) {
 		return
 	}
 
-	bootstrap.FatalError("test fatal error", assert.AnError)
+	bootstrap.FatalError("test fatal errors", assert.AnError)
 
 	// We should never reach this point
 	t.Fatal("FatalError did not exit the process")

@@ -45,7 +45,7 @@ func (uc *LogoutUseCase) Execute(ctx context.Context, input LogoutInput) error {
 	session, err := uc.authSessionRepo.GetByRefreshToken(ctx, input.RefreshToken)
 	if err != nil {
 		uc.logger.Error("Failed to get session by refresh token", map[string]interface{}{
-			"error": err.Error(),
+			"errors": err.Error(),
 		})
 		return err
 	}
@@ -60,7 +60,7 @@ func (uc *LogoutUseCase) Execute(ctx context.Context, input LogoutInput) error {
 	if err != nil {
 		uc.logger.Error("Failed to delete session", map[string]interface{}{
 			"sessionId": session.ID.String(),
-			"error":     err.Error(),
+			"errors":     err.Error(),
 		})
 		return err
 	}

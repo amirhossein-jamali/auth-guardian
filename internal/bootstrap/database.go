@@ -15,7 +15,7 @@ func SetupDatabase(cfg *config.Config, appLogger logger.Logger) *gorm.DB {
 	// Create time provider for database
 	timeProvider := timeAdapter.NewRealTimeProvider()
 
-	// Convert port string to int
+	// Convert ports string to int
 	dbPort, _ := strconv.Atoi(cfg.Database.Port)
 
 	// Create database configuration

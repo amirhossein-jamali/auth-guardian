@@ -63,7 +63,7 @@ func (uc *UpdateProfileUseCase) Execute(ctx context.Context, input UpdateProfile
 	if err != nil {
 		uc.logger.Error("Failed to get user by ID", map[string]interface{}{
 			"userId": input.UserID,
-			"error":  err.Error(),
+			"errors":  err.Error(),
 		})
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func (uc *UpdateProfileUseCase) Execute(ctx context.Context, input UpdateProfile
 			if err != nil {
 				uc.logger.Error("Failed to check email existence", map[string]interface{}{
 					"email": normalizedEmail,
-					"error": err.Error(),
+					"errors": err.Error(),
 				})
 				return nil, err
 			}
@@ -154,7 +154,7 @@ func (uc *UpdateProfileUseCase) Execute(ctx context.Context, input UpdateProfile
 		if err != nil {
 			uc.logger.Error("Failed to update user", map[string]interface{}{
 				"userId": input.UserID,
-				"error":  err.Error(),
+				"errors":  err.Error(),
 			})
 			return nil, err
 		}
@@ -174,7 +174,7 @@ func (uc *UpdateProfileUseCase) Execute(ctx context.Context, input UpdateProfile
 			if err := uc.auditLogger.LogSecurityEvent(ctx, "profile_updated", metadata); err != nil {
 				uc.logger.Warn("Failed to log security event", map[string]any{
 					"userId": user.ID.String(),
-					"error":  err.Error(),
+					"errors":  err.Error(),
 				})
 			}
 		}

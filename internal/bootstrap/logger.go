@@ -32,10 +32,10 @@ func SetupLogger(cfg *config.Config) (logger.Logger, logger.AuditLogger) {
 	return appLogger, auditLogger
 }
 
-// FatalError logs a fatal error and exits the application
+// FatalError logs a fatal errors and exits the application
 func FatalError(message string, err error) {
 	// Create a simple logger for bootstrapping errors
 	appLogger := loggerAdapter.NewZapLogger(false)
-	appLogger.Error(message, map[string]any{"error": err.Error()})
+	appLogger.Error(message, map[string]any{"errors": err.Error()})
 	os.Exit(1)
 }

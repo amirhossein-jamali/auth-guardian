@@ -10,7 +10,7 @@ const (
 	LogLevelInfo
 	// LogLevelWarn for warnings
 	LogLevelWarn
-	// LogLevelError for error information
+	// LogLevelError for errors information
 	LogLevelError
 )
 
@@ -26,7 +26,7 @@ type Logger interface {
 	Info(message string, fields map[string]any)
 	// Warn logs warning messages
 	Warn(message string, fields map[string]any)
-	// Error logs error messages
+	// Error logs errors messages
 	Error(message string, fields map[string]any)
 	// Flush ensures all buffered logs are written to their destination
 	Flush() error

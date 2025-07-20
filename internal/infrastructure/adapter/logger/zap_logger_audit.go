@@ -102,10 +102,57 @@ func (l *ZapAuditLogger) Flush() error {
 	err := l.logger.Sync()
 	
 	// On Windows, syncing stdout/stderr can fail with "invalid argument"
-	// We can safely ignore this specific error
+	// We can safely ignore this specific errors
 	if err != nil && (err.Error() == "sync /dev/stdout: invalid argument" || 
 		err.Error() == "sync /dev/stderr: invalid argument") {
 		return nil
 	}
 	return err
+}
+
+// Log records an audit event with structured data
+func (l *ZapAuditLogger) Log(ctx context.Context, event lport.AuditEvent) error {
+	// Get request ID if available
+	requestID := extractRequestID(ctx)
+	
+	// Build fields from the event
+	fields := []zap.Field{
+		zap.String("action", event.Action),
+		zap.String("targetType", event.TargetType),
+		zap.String("targetId", event.TargetID),
+		zap.Bool("success", event.Success),
+	}
+	
+	// Add optional fields if they are available
+	if event.UserID != "" {
+		fields = append(fields, zap.String("userId", event.UserID))
+	}
+	
+	if event.IP != "" {
+		fields = append(fields, zap.String("ip", event.IP))
+	}
+	
+	if event.UserAgent != "" {
+		fields = append(fields, zap.String("userAgent", event.UserAgent))
+	}
+	
+	if requestID != "" {
+		fields = append(fields, zap.String("requestId", requestID))
+	}
+	
+	// Add all metadata
+	if event.Metadata != nil {
+		for k, v := range event.Metadata {
+			fields = append(fields, zap.Any(k, v))
+		}
+	}
+	
+	// Log with appropriate level based on success
+	if event.Success {
+		l.logger.Info("Security event", fields...)
+	} else {
+		l.logger.Warn("Security event", fields...)
+	}
+	
+	return nil
 }

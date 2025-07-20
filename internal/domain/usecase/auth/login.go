@@ -17,10 +17,11 @@ import (
 
 // LoginInput represents data needed for user login
 type LoginInput struct {
-	Email     string
-	Password  string
-	UserAgent string
-	IP        string
+	Email       string // Optional - user can login with either email or phone
+	PhoneNumber string // Optional - user can login with either email or phone
+	Password    string
+	UserAgent   string
+	IP          string
 }
 
 // LoginOutput represents the result of a successful login
@@ -113,32 +114,67 @@ func (uc *LoginUseCase) Execute(ctx context.Context, input LoginInput) (*LoginOu
 		uc.metricsRecorder.IncCounter("login_attempts", map[string]string{})
 	}
 
-	// Validate email
-	if err := validator.ValidateEmail(input.Email); err != nil {
-		return nil, err
+	// Validate that at least one of email or phone number is provided
+	if input.Email == "" && input.PhoneNumber == "" {
+		return nil, domainErr.NewValidationError("authentication", "either email or phone number must be provided")
 	}
-
-	// Normalize email
-	normalizedEmail := validator.NormalizeEmail(input.Email)
 
 	// Validate password (only check if it's not empty for login)
 	if input.Password == "" {
 		return nil, domainErr.NewValidationError("password", "password is required")
 	}
 
-	// Get user by normalized email
-	user, err := uc.userRepo.GetByEmail(ctx, normalizedEmail)
-	if err != nil {
-		uc.logger.Error("Failed to get user by email", map[string]any{
-			"error": err.Error(),
-		})
-		return nil, err
+	var user *entity.User
+	var err error
+	var identifier string // For logging purposes
+
+	// Try to get user by email if provided
+	if input.Email != "" {
+		// Validate email format
+		if err := validator.ValidateEmail(input.Email); err != nil {
+			return nil, err
+		}
+
+		// Normalize email
+		normalizedEmail := validator.NormalizeEmail(input.Email)
+		identifier = normalizedEmail
+
+		// Get user by normalized email
+		user, err = uc.userRepo.GetByEmail(ctx, normalizedEmail)
+		if err != nil && !domainErr.IsNotFound(err) {
+			uc.logger.Error("Failed to get user by email", map[string]any{
+				"email": normalizedEmail,
+				"error": err.Error(),
+			})
+			return nil, err
+		}
 	}
 
+	// Try to get user by phone number if email wasn't provided or no user was found with that email
+	if user == nil && input.PhoneNumber != "" {
+		// Validate phone number format
+		if err := validator.ValidatePhoneNumber(input.PhoneNumber); err != nil {
+			return nil, err
+		}
+
+		identifier = input.PhoneNumber
+
+		// Get user by phone number
+		user, err = uc.userRepo.GetByPhoneNumber(ctx, input.PhoneNumber)
+		if err != nil && !domainErr.IsNotFound(err) {
+			uc.logger.Error("Failed to get user by phone number", map[string]any{
+				"phoneNumber": input.PhoneNumber,
+				"error":       err.Error(),
+			})
+			return nil, err
+		}
+	}
+
+	// If user is still nil, no user was found with provided credentials
 	if user == nil {
 		uc.logger.Warn("Failed login attempt - user not found", map[string]any{
-			"email": normalizedEmail,
-			"ip":    input.IP,
+			"identifier": identifier,
+			"ip":         input.IP,
 		})
 
 		// Record failed login metric if metrics recorder is available
@@ -154,9 +190,9 @@ func (uc *LoginUseCase) Execute(ctx context.Context, input LoginInput) (*LoginOu
 	// Check if user account is active
 	if !user.IsActive {
 		uc.logger.Warn("Login attempt to inactive account", map[string]any{
-			"userId": user.ID.String(),
-			"email":  normalizedEmail,
-			"ip":     input.IP,
+			"userId":     user.ID.String(),
+			"identifier": identifier,
+			"ip":         input.IP,
 		})
 
 		// Record failed login metric for inactive account
@@ -173,16 +209,17 @@ func (uc *LoginUseCase) Execute(ctx context.Context, input LoginInput) (*LoginOu
 	valid, err := uc.passwordHasher.VerifyPassword(user.PasswordHash, input.Password)
 	if err != nil {
 		uc.logger.Error("Failed to verify password", map[string]any{
-			"error": err.Error(),
+			"userId": user.ID.String(),
+			"error":  err.Error(),
 		})
 		return nil, domainErr.ErrInternalServer
 	}
 
 	if !valid {
 		uc.logger.Warn("Failed login attempt - invalid password", map[string]any{
-			"userId": user.ID.String(),
-			"email":  normalizedEmail,
-			"ip":     input.IP,
+			"userId":     user.ID.String(),
+			"identifier": identifier,
+			"ip":         input.IP,
 		})
 
 		// Record failed login metric for invalid password
@@ -201,77 +238,70 @@ func (uc *LoginUseCase) Execute(ctx context.Context, input LoginInput) (*LoginOu
 			UserID:    user.ID.String(),
 			IP:        input.IP,
 			UserAgent: input.UserAgent,
-			Time:      uc.timeProvider.Now().Unix(),
 		}
 
 		riskLevel, err := uc.riskEvaluator.EvaluateLoginRisk(ctx, riskFactors)
 		if err != nil {
-			// Just log the error and continue, don't fail the login
 			uc.logger.Warn("Failed to evaluate login risk", map[string]any{
-				"userId": user.ID.String(),
-				"error":  err.Error(),
-			})
-		} else if riskLevel >= risk.High {
-			uc.logger.Warn("High risk login detected", map[string]any{
 				"userId":    user.ID.String(),
 				"ip":        input.IP,
-				"riskLevel": riskLevel,
+				"error":     err.Error(),
+			})
+			// Continue despite risk evaluation error
+		} else if riskLevel == risk.High || riskLevel == risk.Critical {
+			uc.logger.Warn("High risk login rejected", map[string]any{
+				"userId":    user.ID.String(),
+				"ip":        input.IP,
+				"riskLevel": riskLevel.String(),
 			})
 
-			// Record metric for high risk login
+			// Record failed login due to risk
 			if uc.metricsRecorder != nil {
-				uc.metricsRecorder.IncCounter("high_risk_logins", map[string]string{
-					"risk_level": riskLevel.String(),
+				uc.metricsRecorder.IncCounter("login_failures", map[string]string{
+					"reason": "high_risk",
 				})
 			}
 
-			// Log security event for high risk login
-			if uc.auditLogger != nil {
-				_ = uc.auditLogger.LogSecurityEvent(ctx, "high_risk_login", map[string]any{
-					"userId":    user.ID.String(),
-					"ip":        input.IP,
-					"userAgent": input.UserAgent,
-					"riskLevel": riskLevel,
-				})
-			}
-
-			// Here you could implement additional security measures:
-			// - Force 2FA verification
-			// - Limit session duration
-			// - Apply additional restrictions
-			// For now, we just log it and continue
+			return nil, domainErr.NewAuthorizationError("user", "login", "login attempt flagged as high risk")
 		}
 	}
 
-	// Ensure session limit and log any errors but continue
-	if err := uc.authSessionRepo.EnsureSessionLimit(ctx, user.ID, uc.maxSessions); err != nil {
-		uc.logger.Warn("Failed to enforce session limit", map[string]any{
+	// Get the number of active sessions for this user
+	sessionCount, err := uc.authSessionRepo.CountByUserID(ctx, user.ID)
+	if err != nil {
+		uc.logger.Error("Failed to count active sessions", map[string]any{
 			"userId": user.ID.String(),
 			"error":  err.Error(),
 		})
-		// Continue anyway as this is not critical
+		// Continue even with errors - we'll handle max sessions later
 	}
 
-	// Generate tokens
+	// Check if max sessions reached
+	if sessionCount >= uc.maxSessions {
+		uc.logger.Warn("Max sessions reached for user", map[string]any{
+			"userId":      user.ID.String(),
+			"maxSessions": uc.maxSessions,
+		})
+
+		// Record max sessions event
+		if uc.metricsRecorder != nil {
+			uc.metricsRecorder.IncCounter("login_max_sessions", map[string]string{})
+		}
+
+		return nil, domainErr.ErrMaxSessionsReached
+	}
+
+	// Generate access and refresh tokens
 	accessToken, refreshToken, expiresAt, err := uc.tokenService.GenerateTokens(user.ID.String())
 	if err != nil {
 		uc.logger.Error("Failed to generate tokens", map[string]any{
-			"error": err.Error(),
+			"userId": user.ID.String(),
+			"error":  err.Error(),
 		})
 		return nil, domainErr.ErrTokenGenerationFailed
 	}
 
-	// Validate expiration time
-	if expiresAt <= 0 {
-		uc.logger.Error("Invalid expiration time received", map[string]any{
-			"userId":    user.ID.String(),
-			"expiresAt": expiresAt,
-		})
-		return nil, domainErr.ErrTokenGenerationFailed
-	}
-
-	// Create auth session and log error if it fails, but continue process
-	// Token authentication can work without session record
+	// Create auth session
 	if err := uc.sessionCreator.CreateSession(
 		ctx,
 		user.ID,
@@ -286,29 +316,45 @@ func (uc *LoginUseCase) Execute(ctx context.Context, input LoginInput) (*LoginOu
 		})
 	}
 
-	// Log security event for successful login
-	if uc.auditLogger != nil {
-		_ = uc.auditLogger.LogSecurityEvent(ctx, "user_login", map[string]any{
-			"userId":    user.ID.String(),
-			"ip":        input.IP,
-			"userAgent": input.UserAgent,
-		})
+	// Log successful login with execution time
+	elapsed := uc.timeProvider.Now().Sub(startTime)
+	logData := map[string]any{
+		"userId":  user.ID.String(),
+		"elapsed": elapsed.String(),
+		"ip":      input.IP,
 	}
 
-	// Record successful login metric
+	// Add identifier used for login to logs
+	logData["loginMethod"] = "email"
+	if input.Email != "" {
+		logData["email"] = validator.NormalizeEmail(input.Email)
+	} else {
+		logData["loginMethod"] = "phoneNumber"
+		logData["phoneNumber"] = input.PhoneNumber
+	}
+
+	uc.logger.Info("User logged in successfully", logData)
+
+	// Record successful login
 	if uc.metricsRecorder != nil {
 		uc.metricsRecorder.IncCounter("login_success", map[string]string{})
-		elapsed := uc.timeProvider.Since(startTime)
-		uc.metricsRecorder.ObserveHistogram("login_duration_ms", float64(elapsed.Milliseconds()), map[string]string{})
+		uc.metricsRecorder.ObserveHistogram("login_latency", float64(elapsed.Milliseconds()), map[string]string{})
 	}
 
-	// Log successful login with execution time
-	elapsed := uc.timeProvider.Since(startTime)
-	uc.logger.Info("User logged in successfully", map[string]any{
-		"userId":  user.ID.String(),
-		"email":   normalizedEmail,
-		"elapsed": elapsed.String(),
-	})
+	// Record login event with audit logger if available
+	if uc.auditLogger != nil {
+		metadata := map[string]interface{}{
+			"ip":        input.IP,
+			"userAgent": input.UserAgent,
+		}
+
+		uc.auditLogger.LogSecurityEvent(ctx, "user.login", map[string]any{
+			"userId":   user.ID.String(),
+			"ip":       input.IP,
+			"success":  true,
+			"metadata": metadata,
+		})
+	}
 
 	return &LoginOutput{
 		User:         user,

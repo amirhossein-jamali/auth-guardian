@@ -340,6 +340,122 @@ func (_c *MockUserRepository_GetByID_Call) RunAndReturn(run func(context.Context
 	return _c
 }
 
+// GetByPhoneNumber provides a mock function with given fields: ctx, phoneNumber
+func (_m *MockUserRepository) GetByPhoneNumber(ctx context.Context, phoneNumber string) (*entity.User, error) {
+	ret := _m.Called(ctx, phoneNumber)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetByPhoneNumber")
+	}
+
+	var r0 *entity.User
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) (*entity.User, error)); ok {
+		return rf(ctx, phoneNumber)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string) *entity.User); ok {
+		r0 = rf(ctx, phoneNumber)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*entity.User)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, phoneNumber)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockUserRepository_GetByPhoneNumber_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByPhoneNumber'
+type MockUserRepository_GetByPhoneNumber_Call struct {
+	*mock.Call
+}
+
+// GetByPhoneNumber is a helper method to define mock.On call
+//   - ctx context.Context
+//   - phoneNumber string
+func (_e *MockUserRepository_Expecter) GetByPhoneNumber(ctx interface{}, phoneNumber interface{}) *MockUserRepository_GetByPhoneNumber_Call {
+	return &MockUserRepository_GetByPhoneNumber_Call{Call: _e.mock.On("GetByPhoneNumber", ctx, phoneNumber)}
+}
+
+func (_c *MockUserRepository_GetByPhoneNumber_Call) Run(run func(ctx context.Context, phoneNumber string)) *MockUserRepository_GetByPhoneNumber_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *MockUserRepository_GetByPhoneNumber_Call) Return(_a0 *entity.User, _a1 error) *MockUserRepository_GetByPhoneNumber_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockUserRepository_GetByPhoneNumber_Call) RunAndReturn(run func(context.Context, string) (*entity.User, error)) *MockUserRepository_GetByPhoneNumber_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// PhoneNumberExists provides a mock function with given fields: ctx, phoneNumber
+func (_m *MockUserRepository) PhoneNumberExists(ctx context.Context, phoneNumber string) (bool, error) {
+	ret := _m.Called(ctx, phoneNumber)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PhoneNumberExists")
+	}
+
+	var r0 bool
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) (bool, error)); ok {
+		return rf(ctx, phoneNumber)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string) bool); ok {
+		r0 = rf(ctx, phoneNumber)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, phoneNumber)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockUserRepository_PhoneNumberExists_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PhoneNumberExists'
+type MockUserRepository_PhoneNumberExists_Call struct {
+	*mock.Call
+}
+
+// PhoneNumberExists is a helper method to define mock.On call
+//   - ctx context.Context
+//   - phoneNumber string
+func (_e *MockUserRepository_Expecter) PhoneNumberExists(ctx interface{}, phoneNumber interface{}) *MockUserRepository_PhoneNumberExists_Call {
+	return &MockUserRepository_PhoneNumberExists_Call{Call: _e.mock.On("PhoneNumberExists", ctx, phoneNumber)}
+}
+
+func (_c *MockUserRepository_PhoneNumberExists_Call) Run(run func(ctx context.Context, phoneNumber string)) *MockUserRepository_PhoneNumberExists_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *MockUserRepository_PhoneNumberExists_Call) Return(_a0 bool, _a1 error) *MockUserRepository_PhoneNumberExists_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockUserRepository_PhoneNumberExists_Call) RunAndReturn(run func(context.Context, string) (bool, error)) *MockUserRepository_PhoneNumberExists_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Update provides a mock function with given fields: ctx, user
 func (_m *MockUserRepository) Update(ctx context.Context, user *entity.User) error {
 	ret := _m.Called(ctx, user)

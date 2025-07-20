@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: ${AUTH_GUARDIAN_DB_PASSWORD}
       POSTGRES_DB: ${AUTH_GUARDIAN_DB_NAME}
     ports:
-      - "5432:5432"
+      - "15433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
@@ -24,7 +24,7 @@ services:
     container_name: auth_guardian_redis
     command: sh -c 'if [ -z "${AUTH_GUARDIAN_REDIS_PASSWORD}" ]; then redis-server; else redis-server --requirepass "${AUTH_GUARDIAN_REDIS_PASSWORD}"; fi'
     ports:
-      - "6379:6379"
+      - "16380:6379"
     volumes:
       - redis_data:/data
     restart: unless-stopped
@@ -36,16 +36,27 @@ services:
     networks:
       - auth_guardian_network
   
+  twilio-mock:
+    image: expertflow/twilio-mock:latest	
+    container_name: auth_guardian_twilio
+    ports:
+      - "4010:4010"
+    restart: unless-stopped
+    networks:
+      - auth_guardian_network
+  
   api:
     build:
-      context: ../backend
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: docker/Dockerfile
     container_name: auth_guardian_api
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      twilio-mock:
+        condition: service_started
     # Port is no longer exposed publicly, only to internal network
     expose:
       - "8080"
@@ -105,6 +116,12 @@ services:
       # Auth variables
       AUTH_GUARDIAN_ACCESS_TOKEN_SECRET: ${AUTH_GUARDIAN_ACCESS_TOKEN_SECRET}
       AUTH_GUARDIAN_REFRESH_TOKEN_SECRET: ${AUTH_GUARDIAN_REFRESH_TOKEN_SECRET}
+      
+      # Twilio Mock variables
+      TWILIO_BASE_URL: "http://twilio-mock:4010"
+      TWILIO_ACCOUNT_SID: "mock_account_sid"
+      TWILIO_AUTH_TOKEN: "mock_auth_token"
+      TWILIO_FROM_NUMBER: "+15005550006"
     restart: unless-stopped
     networks:
       - auth_guardian_network

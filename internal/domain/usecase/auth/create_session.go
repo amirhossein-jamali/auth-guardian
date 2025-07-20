@@ -80,7 +80,7 @@ func (sc *DefaultSessionCreator) CreateSession(
 	if err != nil {
 		sc.logger.Error("Failed to create auth session", map[string]interface{}{
 			"userID": userID.String(),
-			"error":  err.Error(),
+			"errors":  err.Error(),
 		})
 		return err
 	}

@@ -27,9 +27,12 @@ func SetupRoutes(
 		// Auth endpoints (public)
 		auth := api.Group("/auth")
 		{
-			auth.POST("/register", authHandler.Register)
+			// auth.POST("/register", authHandler.Register) // Removed old registration endpoint
+			auth.POST("/register-with-otp", authHandler.RegisterWithOTP) // Combined endpoint
 			auth.POST("/login", authHandler.Login)
 			auth.POST("/refresh", authHandler.RefreshToken)
+			auth.POST("/request-otp", authHandler.RequestOTP)
+			// auth.POST("/verify-otp", authHandler.VerifyOTP) // Removed old verification endpoint
 		}
 
 		// Protected routes

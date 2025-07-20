@@ -21,7 +21,8 @@ func TestIsValidEmail(t *testing.T) {
 		{"Valid email with uppercase", "USER@EXAMPLE.COM", true},
 		{"Valid email with mixed case", "UsEr@ExAmPlE.CoM", true},
 
-		{"Empty email", "", false},
+		// Empty email is now allowed as valid since it's optional
+		{"Empty email", "", true},
 		{"Missing @", "userexample.com", false},
 		{"Missing domain", "user@", false},
 		{"Missing TLD", "user@example", false},

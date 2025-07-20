@@ -75,7 +75,7 @@ func (l *FileAuditLogger) LogSecurityEvent(ctx context.Context, eventType string
 	jsonData, err := json.Marshal(entry)
 	if err != nil {
 		l.regularLogger.Error("Failed to marshal audit log entry", map[string]any{
-			"error": err.Error(),
+			"errors": err.Error(),
 			"event": eventType,
 		})
 		return err
@@ -95,7 +95,7 @@ func (l *FileAuditLogger) LogSecurityEvent(ctx context.Context, eventType string
 	file, err := os.OpenFile(l.filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		l.regularLogger.Error("Failed to open audit log file", map[string]any{
-			"error":    err.Error(),
+			"errors":    err.Error(),
 			"filePath": l.filePath,
 		})
 		return err
@@ -105,7 +105,7 @@ func (l *FileAuditLogger) LogSecurityEvent(ctx context.Context, eventType string
 	// Write the log entry
 	if _, err := file.Write(jsonData); err != nil {
 		l.regularLogger.Error("Failed to write to audit log", map[string]any{
-			"error":    err.Error(),
+			"errors":    err.Error(),
 			"filePath": l.filePath,
 		})
 		return err
@@ -118,6 +118,77 @@ func (l *FileAuditLogger) LogSecurityEvent(ctx context.Context, eventType string
 func (l *FileAuditLogger) Flush() error {
 	// For file logger, there's no in-memory buffering, so nothing to do
 	// If we added buffering in the future, we would flush it here
+	return nil
+}
+
+// Log records an audit event with structured data
+func (l *FileAuditLogger) Log(ctx context.Context, event lport.AuditEvent) error {
+	// Create timestamp using timeSource
+	timestamp := l.timeSource.Now().Format(tport.RFC3339Format)
+	
+	// Extract request ID from context
+	requestID := extractRequestID(ctx)
+	
+	// Create the log entry structure
+	entryMap := map[string]interface{}{
+		"timestamp":   timestamp,
+		"event_type":  event.Action,
+		"target_type": event.TargetType,
+		"target_id":   event.TargetID,
+		"request_id":  requestID,
+		"user_id":     event.UserID,
+		"ip":          event.IP,
+		"user_agent":  event.UserAgent,
+		"success":     event.Success,
+	}
+	
+	// Add any additional metadata
+	if event.Metadata != nil {
+		for k, v := range event.Metadata {
+			entryMap[k] = v
+		}
+	}
+
+	// Marshal to JSON
+	jsonData, err := json.Marshal(entryMap)
+	if err != nil {
+		l.regularLogger.Error("Failed to marshal audit event", map[string]any{
+			"errors": err.Error(),
+			"action": event.Action,
+		})
+		return err
+	}
+
+	// Append newline for readability
+	jsonData = append(jsonData, '\n')
+
+	// Write to file (with mutex to prevent race conditions)
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	// Check if we need to rotate the log file (if date has changed)
+	l.checkRotateFile()
+
+	// Open the file in append mode
+	file, err := os.OpenFile(l.filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		l.regularLogger.Error("Failed to open audit log file", map[string]any{
+			"errors":   err.Error(),
+			"filePath": l.filePath,
+		})
+		return err
+	}
+	defer file.Close()
+
+	// Write the log entry
+	if _, err := file.Write(jsonData); err != nil {
+		l.regularLogger.Error("Failed to write audit event to log", map[string]any{
+			"errors":   err.Error(),
+			"filePath": l.filePath,
+		})
+		return err
+	}
+
 	return nil
 }
 

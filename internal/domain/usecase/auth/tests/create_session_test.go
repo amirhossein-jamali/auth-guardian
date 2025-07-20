@@ -224,10 +224,10 @@ func TestSessionCreator_CreateSession_RepositoryError(t *testing.T) {
 	timeProvider.EXPECT().Now().Return(now)
 	idGenerator.EXPECT().GenerateID().Return(generatedID)
 
-	// Expect repository.Create to return an error
+	// Expect repository.Create to return an errors
 	authSessionRepo.EXPECT().Create(mock.Anything, mock.Anything).Return(dbError)
 
-	// Logging expectation for error
+	// Logging expectation for errors
 	logger.EXPECT().Error(mock.Anything, mock.Anything).Return()
 
 	// Create session creator

@@ -87,7 +87,7 @@ func TestGetUserUseCase_Execute_UserNotFound(t *testing.T) {
 
 	// Setup expectations
 	timeProvider.EXPECT().Now().Return(now)
-	userRepo.EXPECT().GetByID(mock.Anything, entity.ID(userID)).Return(nil, nil) // User not found but no error
+	userRepo.EXPECT().GetByID(mock.Anything, entity.ID(userID)).Return(nil, nil) // User not found but no errors
 
 	// Create use case
 	useCase := user.NewGetUserUseCase(
@@ -145,13 +145,13 @@ func TestGetUserUseCase_Execute_RepositoryError(t *testing.T) {
 	// Test data with valid UUID format
 	userID := "123e4567-e89b-12d3-a456-426614174000"
 	now := time.Now()
-	repoError := errors.New("database connection error")
+	repoError := errors.New("database connection errors")
 
 	// Setup expectations
 	timeProvider.EXPECT().Now().Return(now)
 	userRepo.EXPECT().GetByID(mock.Anything, entity.ID(userID)).Return(nil, repoError)
 	logger.EXPECT().Error("Failed to get user by ID", mock.MatchedBy(func(data map[string]interface{}) bool {
-		return data["userId"] == userID && data["error"] == repoError.Error()
+		return data["userId"] == userID && data["errors"] == repoError.Error()
 	}))
 
 	// Create use case

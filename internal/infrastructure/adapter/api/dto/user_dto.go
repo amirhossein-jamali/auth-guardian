@@ -1,6 +1,7 @@
 package dto
 
 // UserResponse represents the user data returned in API responses
+// swagger:model
 type UserResponse struct {
 	ID        string `json:"id"`
 	Email     string `json:"email"`
@@ -12,6 +13,7 @@ type UserResponse struct {
 }
 
 // UpdateUserRequest represents the data needed for updating a user profile
+// swagger:model
 type UpdateUserRequest struct {
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`

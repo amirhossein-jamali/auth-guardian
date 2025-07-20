@@ -2,15 +2,46 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"syscall"
-	
+
 	"github.com/amirhossein-jamali/auth-guardian/internal/bootstrap"
 	"github.com/amirhossein-jamali/auth-guardian/internal/infrastructure/config"
 )
 
+// @title Auth Guardian API
+// @version 1.0
+// @description Authentication and authorization service with advanced security features.
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name API Support
+// @contact.url http://www.auth-guardian.io/support
+// @contact.email support@auth-guardian.io
+
+// @license.name Apache 2.0
+// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host localhost:8080
+// @BasePath /api
+// @schemes http https
+
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name Authorization
+// @description Bearer Token Authentication. Example: "Bearer {token}"
 func main() {
+	// Add a global panic recovery to prevent the application from crashing
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Fprintf(os.Stderr, "FATAL: Recovered from panic in main: %v\n", r)
+			fmt.Fprintf(os.Stderr, "Stack trace: %s\n", debug.Stack())
+			os.Exit(1)
+		}
+	}()
+
 	// 1. Create a cancellable context for graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -39,7 +70,7 @@ func main() {
 
 	// 7. Setup HTTP server
 	server := bootstrap.SetupServer(cfg, services, rateLimiter, services.TokenService, appLogger)
-	appLogger.Info("HTTP server configured", map[string]any{"port": cfg.Server.Port})
+	appLogger.Info("HTTP server configured", map[string]any{"ports": cfg.Server.Port})
 
 	// 8. Start server in a non-blocking way
 	bootstrap.StartServer(server, appLogger)
@@ -57,4 +88,4 @@ func main() {
 	bootstrap.GracefulShutdown(ctx, server, redisClient, appLogger)
 
 	appLogger.Info("Server exited properly", nil)
-} 
+}

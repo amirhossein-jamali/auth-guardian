@@ -7,9 +7,11 @@ import (
 	"github.com/amirhossein-jamali/auth-guardian/internal/domain/port/idgenerator"
 	"github.com/amirhossein-jamali/auth-guardian/internal/domain/port/logger"
 	"github.com/amirhossein-jamali/auth-guardian/internal/domain/port/metrics"
+	"github.com/amirhossein-jamali/auth-guardian/internal/domain/port/otp"
 	"github.com/amirhossein-jamali/auth-guardian/internal/domain/port/password"
 	"github.com/amirhossein-jamali/auth-guardian/internal/domain/port/repository"
 	"github.com/amirhossein-jamali/auth-guardian/internal/domain/port/risk"
+	"github.com/amirhossein-jamali/auth-guardian/internal/domain/port/storage"
 	tport "github.com/amirhossein-jamali/auth-guardian/internal/domain/port/time"
 	"github.com/amirhossein-jamali/auth-guardian/internal/domain/port/token"
 	"github.com/amirhossein-jamali/auth-guardian/internal/domain/usecase/auth"
@@ -22,12 +24,21 @@ type Factory struct {
 	// Dependencies
 	userRepo           repository.UserRepository
 	authSessionRepo    repository.AuthSessionRepository
+	otpRepo            repository.OTPRepository
 	tokenService       token.TokenService
 	passwordHasher     password.Hasher
 	idGenerator        idgenerator.IDGenerator
 	timeProvider       tport.Provider
 	logger             logger.Logger
 	maxSessionsPerUser int64
+	
+	// OTP related dependencies
+	otpService      otp.OTPService
+	rateLimiter     storage.RateLimiter
+	otpLength       int
+	otpExpirySeconds int
+	otpCooldownSec   int
+	maxOTPAttempts   int
 
 	// Enhanced features
 	auditLogger      logger.AuditLogger
@@ -40,24 +51,34 @@ type Factory struct {
 	sessionCreator  *auth.DefaultSessionCreator
 	registerUseCase *auth.RegisterUseCase
 	loginUseCase    *auth.LoginUseCase
+	requestOTPUseCase *auth.RequestOTPUseCase
+	verifyOTPUseCase *auth.VerifyOTPUseCase
 }
 
 // NewFactory creates a new Factory
 func NewFactory(
 	userRepo repository.UserRepository,
 	authSessionRepo repository.AuthSessionRepository,
+	otpRepo repository.OTPRepository,
 	tokenService token.TokenService,
 	passwordHasher password.Hasher,
 	idGenerator idgenerator.IDGenerator,
 	timeProvider tport.Provider,
 	logger logger.Logger,
 	maxSessionsPerUser int64,
+	otpService otp.OTPService,
+	rateLimiter storage.RateLimiter,
+	otpLength int,
+	otpExpirySeconds int,
+	otpCooldownSec int,
+	maxOTPAttempts int,
 	// Optional parameters with default values
 	options ...FactoryOption,
 ) *Factory {
 	factory := &Factory{
 		userRepo:           userRepo,
 		authSessionRepo:    authSessionRepo,
+		otpRepo:            otpRepo,
 		tokenService:       tokenService,
 		passwordHasher:     passwordHasher,
 		idGenerator:        idGenerator,
@@ -65,6 +86,12 @@ func NewFactory(
 		logger:             logger,
 		maxSessionsPerUser: maxSessionsPerUser,
 		operationTimeout:   30 * tport.Second,
+		otpService:         otpService,
+		rateLimiter:        rateLimiter,
+		otpLength:          otpLength,
+		otpExpirySeconds:   otpExpirySeconds,
+		otpCooldownSec:     otpCooldownSec,
+		maxOTPAttempts:     maxOTPAttempts,
 	}
 
 	// Apply options
@@ -161,12 +188,14 @@ func (f *Factory) RegisterUseCase() *auth.RegisterUseCase {
 	// Create the use case outside the lock
 	uc := auth.NewRegisterUseCase(
 		f.userRepo,
+		f.otpRepo,
 		sc,
 		f.passwordHasher,
 		f.tokenService,
 		f.idGenerator,
 		f.timeProvider,
 		f.logger,
+		f.maxOTPAttempts,
 	)
 
 	// Store it in the cache under lock
@@ -266,6 +295,98 @@ func (f *Factory) LogoutOtherSessionsUseCase() *auth.LogoutOtherSessionsUseCase 
 		f.timeProvider,
 		f.auditLogger,
 	)
+}
+
+// RequestOTPUseCase returns a cached request OTP use case
+func (f *Factory) RequestOTPUseCase() *auth.RequestOTPUseCase {
+	f.mu.RLock()
+	if uc := f.requestOTPUseCase; uc != nil {
+		f.mu.RUnlock()
+		return uc
+	}
+	f.mu.RUnlock()
+
+	// Create the request OTP use case options
+	var options []auth.RequestOTPUseCaseOption
+	if f.metricsRecorder != nil {
+		options = append(options, auth.WithMetricsRecorderForOTP(f.metricsRecorder))
+	}
+	if f.auditLogger != nil {
+		options = append(options, auth.WithAuditLoggerForOTP(f.auditLogger))
+	}
+
+	// Create the use case outside the lock
+	uc := auth.NewRequestOTPUseCase(
+		f.otpRepo,
+		f.otpService,
+		f.idGenerator,
+		f.timeProvider,
+		f.logger,
+		f.rateLimiter,
+		f.otpLength,
+		f.otpExpirySeconds,
+		f.otpCooldownSec,
+		f.maxOTPAttempts,
+		options...,
+	)
+
+	// Store it in the cache under lock
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	// Double-check if another thread created it while we were waiting
+	if f.requestOTPUseCase == nil {
+		f.requestOTPUseCase = uc
+	}
+
+	return f.requestOTPUseCase
+}
+
+// VerifyOTPUseCase returns a cached verify OTP use case
+func (f *Factory) VerifyOTPUseCase() *auth.VerifyOTPUseCase {
+	f.mu.RLock()
+	if uc := f.verifyOTPUseCase; uc != nil {
+		f.mu.RUnlock()
+		return uc
+	}
+	f.mu.RUnlock()
+
+	// Get dependencies outside of lock to prevent deadlocks
+	sc := f.SessionCreator()
+
+	// Create verify OTP use case options
+	var options []auth.VerifyOTPUseCaseOption
+	if f.metricsRecorder != nil {
+		options = append(options, auth.WithMetricsRecorderForVerifyOTP(f.metricsRecorder))
+	}
+	if f.auditLogger != nil {
+		options = append(options, auth.WithAuditLoggerForVerifyOTP(f.auditLogger))
+	}
+
+	// Create the use case outside the lock
+	uc := auth.NewVerifyOTPUseCase(
+		f.userRepo,
+		f.otpRepo,
+		f.authSessionRepo,
+		sc,
+		f.tokenService,
+		f.idGenerator,
+		f.timeProvider,
+		f.logger,
+		f.maxOTPAttempts,
+		options...,
+	)
+
+	// Store it in the cache under lock
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	// Double-check if another thread created it while we were waiting
+	if f.verifyOTPUseCase == nil {
+		f.verifyOTPUseCase = uc
+	}
+
+	return f.verifyOTPUseCase
 }
 
 // GetUserUseCase returns a get user use case

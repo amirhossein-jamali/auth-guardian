@@ -76,7 +76,7 @@ func (m *DBManager) Close() error {
 	sqlDB, err := m.db.DB()
 	if err != nil {
 		m.logger.Error("Failed to get database instance for closing", map[string]any{
-			"error": err.Error(),
+			"errors": err.Error(),
 		})
 		return err
 	}
@@ -84,7 +84,7 @@ func (m *DBManager) Close() error {
 	sqlDBWrapper := newSQLDatabaseWrapper(sqlDB)
 	if err := sqlDBWrapper.Close(); err != nil {
 		m.logger.Error("Error closing database connection", map[string]any{
-			"error": err.Error(),
+			"errors": err.Error(),
 		})
 		return err
 	}
@@ -102,7 +102,7 @@ func (m *DBManager) HealthCheck(ctx context.Context) error {
 	sqlDB, err := m.db.DB()
 	if err != nil {
 		m.logger.Error("Failed to get database instance for health check", map[string]any{
-			"error": err.Error(),
+			"errors": err.Error(),
 		})
 		return MapError(err)
 	}
@@ -113,7 +113,7 @@ func (m *DBManager) HealthCheck(ctx context.Context) error {
 	// Simple ping to check connectivity
 	if err := sqlDBWrapper.PingContext(ctx); err != nil {
 		m.logger.Error("Database health check failed", map[string]any{
-			"error": err.Error(),
+			"errors": err.Error(),
 		})
 		return domainError.ErrDatabaseOperation
 	}
@@ -134,7 +134,7 @@ func (m *DBManager) RunInTransaction(ctx context.Context, fn func(tx *gorm.DB) e
 		err := fn(tx)
 		if err != nil {
 			m.logger.Error("Transaction failed, rolling back", map[string]any{
-				"error": err.Error(),
+				"errors": err.Error(),
 			})
 			return err
 		}
@@ -218,7 +218,7 @@ func connectWithRetry(config *DatabaseConfig, log logger.Logger, timeProvider tp
 
 		log.Error("Failed to connect to database", map[string]any{
 			"attempt": attempt,
-			"error":   err.Error(),
+			"errors":   err.Error(),
 			"dsn":     dsnForLog,
 		})
 	}
@@ -226,7 +226,7 @@ func connectWithRetry(config *DatabaseConfig, log logger.Logger, timeProvider tp
 	if err != nil {
 		log.Error("All connection attempts failed", map[string]any{
 			"maxRetries": maxRetries,
-			"error":      err.Error(),
+			"errors":      err.Error(),
 			"dsn":        dsnForLog,
 		})
 		return nil, domainError.ErrDatabaseOperation
@@ -236,7 +236,7 @@ func connectWithRetry(config *DatabaseConfig, log logger.Logger, timeProvider tp
 	sqlDB, err := db.DB()
 	if err != nil {
 		log.Error("Failed to get database connection", map[string]any{
-			"error": err.Error(),
+			"errors": err.Error(),
 		})
 		return nil, err
 	}
@@ -247,7 +247,7 @@ func connectWithRetry(config *DatabaseConfig, log logger.Logger, timeProvider tp
 	// Configure the connection pool
 	if err := configureConnectionPool(sqlDBWrapper, config, timeProvider); err != nil {
 		log.Error("Failed to configure connection pool", map[string]any{
-			"error": err.Error(),
+			"errors": err.Error(),
 		})
 		return nil, domainError.ErrDatabaseOperation
 	}

@@ -43,7 +43,7 @@ func (uc *LogoutAllUseCase) Execute(ctx context.Context, input LogoutAllInput) e
 	if err != nil {
 		uc.logger.Error("Failed to delete all sessions for user", map[string]interface{}{
 			"userId": input.UserID,
-			"error":  err.Error(),
+			"errors":  err.Error(),
 		})
 		return err
 	}

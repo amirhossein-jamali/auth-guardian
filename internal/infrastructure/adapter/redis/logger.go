@@ -54,7 +54,7 @@ func (l *RedisLogger) LogCommand(cmd, key string, args ...interface{}) {
 	l.logger.Debug(fmt.Sprintf("Redis command: %s %s", cmd, key), fields)
 }
 
-// LogError logs a Redis error
+// LogError logs a Redis errors
 func (l *RedisLogger) LogError(cmd string, err error) {
 	if !l.enableLogging || err == nil || l.minLogLevel > logger.LogLevelError {
 		return
@@ -63,10 +63,10 @@ func (l *RedisLogger) LogError(cmd string, err error) {
 	fields := map[string]any{
 		"source":  "redis",
 		"command": cmd,
-		"error":   err.Error(),
+		"errors":   err.Error(),
 	}
 
-	l.logger.Error(fmt.Sprintf("Redis error: %s", cmd), fields)
+	l.logger.Error(fmt.Sprintf("Redis errors: %s", cmd), fields)
 }
 
 // LogConnection logs connection-related events
@@ -83,7 +83,7 @@ func (l *RedisLogger) LogConnection(action, address string, err error) {
 
 	if err != nil {
 		if l.minLogLevel <= logger.LogLevelError {
-			fields["error"] = err.Error()
+			fields["errors"] = err.Error()
 			l.logger.Error(fmt.Sprintf("Redis connection %s failed", action), fields)
 		}
 	} else if l.minLogLevel <= logger.LogLevelInfo {

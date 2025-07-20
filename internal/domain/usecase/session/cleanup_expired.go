@@ -82,7 +82,7 @@ func (uc *CleanupExpiredSessionsUseCase) Execute(ctx context.Context, input Clea
 		}
 
 		uc.logger.Error("Failed to delete expired sessions", map[string]any{
-			"error": err.Error(),
+			"errors": err.Error(),
 		})
 		return err
 	}
